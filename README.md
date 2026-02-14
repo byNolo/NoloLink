@@ -1,101 +1,153 @@
-# NoloLink
+<div align="center">
 
-NoloLink is a modern, self-hosted URL shortening service integrated with KeyN authentication. It provides a robust platform for creating, managing, and tracking shortened links with granular access control.
+# NoloLink - byNolo
+
+**Modern, self-hosted URL shortening platform with granular access control and analytics.**  
+Shorten · Track · Secure · Manage · Analyze
+
+[![Python](https://img.shields.io/badge/Python-3.11%2B-3776AB?logo=python&logoColor=white)](https://python.org)
+[![React](https://img.shields.io/badge/React-18-61DAFB?logo=react&logoColor=black)](https://reactjs.org)
+![Status](https://img.shields.io/badge/Status-Active-success)
+![byNolo](https://img.shields.io/badge/byNolo-Studios-34d399?labelColor=0b0f12)
+
+<sub>Designed, secured &amp; deployed · <strong>NoloLink - byNolo</strong></sub>
+
+</div>
+
+---
+
+## Key Highlights
+
+| Capability | What You Get | Notes |
+|------------|--------------|-------|
+| **Link Management** | Create, edit, and delete short URLs | Custom aliases supported |
+| **Secure Authentication** | Integrated OAuth 2.0 with KeyN | seamless identity management |
+| **Real-time Analytics** | Total click tracking per link | visualized on dashboard |
+| **Smart Stats Access** | Public stats via `code+` (if owner) | Unauthorized users redirected |
+| **QR Code Integration** | Instant QR generation for sharing | Downloadable & scannable |
+| **Granular Access** | Role-based permissions & approval workflow | Admin controls user onboarding |
+| **Responsive UI** | Modern, dark-themed dashboard | Built with React + Tailwind CSS |
+| **Deployment Ready** | Container-friendly architecture | Easy to self-host |
+
+---
+
+## Table of Contents
+1. [Features](#features)
+2. [Quick Start](#quick-start)
+3. [Architecture](#architecture)
+4. [Configuration](#configuration)
+5. [Development](#development)
+6. [License](#license)
+
+---
 
 ## Features
 
-*   **Secure Authentication**: Integrated with KeyN OAuth for secure user management.
-*   **Link Management**: Create, edit, delete, and track clicks for shortened URLs.
-*   **Custom Aliases**: Support for custom short codes (e.g., `s.bynolo.ca/custom-name`).
-*   **Access Control**: Role-based access control with an approval workflow for new users.
-*   **Admin Dashboard**: Dedicated panel for administrators to manage user access requests.
-*   **Responsive UI**: A modern, dark-themed interface built with React and Tailwind CSS.
+Modern URL shortening with security at its core:
+*   **Secure Authentication** - Seamless integration with KeyN OAuth for user identity.
+*   **Advanced Link Management** - Create, edit, delete, and manage custom short links.
+*   **Real-time Analytics** - View total clicks and metadata for every link.
+*   **QR Code Integration** - Auto-generated QR codes for instant mobile sharing.
+*   **Smart Stats Access** - Append `+` to any short link to view its stats (e.g., `s.bynolo.ca/code+`).
+    *   *Security Feature*: Only the Link Owner can view stats. Unauthorized users are auto-redirected to the link destination.
+*   **Granular Access Control** - Role-based permissions with an Admin approval system for new users.
+*   **Responsive Experience** - Sleek, dark-themed UI built with React and Tailwind CSS.
 
-## Technology Stack
+---
 
-### Backend
-*   **Framework**: FastAPI (Python)
-*   **Database**: SQLite (with SQLAlchemy ORM)
-*   **Migrations**: Alembic
-*   **Authentication**: OAuth2 with KeyN
-
-### Frontend
-*   **Framework**: React (Vite)
-*   **Language**: TypeScript
-*   **Styling**: Tailwind CSS
-*   **State Management**: React Context API
-
-## Getting Started
+## Quick Start
 
 ### Prerequisites
-*   Python 3.10 or higher
-*   Node.js 18 or higher
-*   Make (optional, for convenience commands)
+*   Python 3.10+
+*   Node.js 18+
+*   Make (optional)
 
 ### Installation
 
-1.  **Clone the repository:**
+1.  **Clone the repository**
     ```bash
-    git clone https://github.com/yourusername/nololink.git
-    cd nololink
+    git clone https://github.com/byNolo/NoloLink.git
+    cd NoloLink
     ```
 
-2.  **Install Backend Dependencies:**
+2.  **Install Backend**
     ```bash
     cd apps/backend
     poetry install
     ```
 
-3.  **Install Frontend Dependencies:**
+3.  **Install Frontend**
     ```bash
     cd ../frontend
     npm install
     ```
 
-### Configuration
-
-1.  **Backend Environment:**
-    Copy `apps/backend/.env.example` to `apps/backend/.env` and update the values:
-    ```bash
-    cp apps/backend/.env.example apps/backend/.env
-    ```
-    Required variables: `KEYN_CLIENT_ID`, `KEYN_CLIENT_SECRET`, `FRONTEND_URL`, `SERVER_HOST`.
-
-2.  **Frontend Environment:**
-    Create `apps/frontend/.env` with the following variables:
-    ```env
-    VITE_API_URL=http://localhost:3071
-    VITE_SHORT_LINK_DOMAIN=localhost:3071
-    ```
-
 ### Running the Application
 
-You can start both services simultaneously using the provided Makefile:
+Use the provided Makefile for convenience:
 
 ```bash
 make run-all
 ```
 
-Alternatively, run them separately:
-
+Or run services individually:
 *   **Backend**: `cd apps/backend && poetry run uvicorn main:app --reload --port 3071`
 *   **Frontend**: `cd apps/frontend && npm run dev -- --port 3070`
 
-## Project Structure
+---
 
+## Architecture
+
+```
+┌──────────────┐     ┌────────────────┐     ┌────────────────┐
+│  React App   │ ─▶ │  FastAPI API   │ ─▶  │  SQLite DB     │
+│  (Frontend)  │     │  (Backend)     │     │  (Storage)     │
+└──────────────┘     └────────────────┘     └────────────────┘
+       │                      │
+       ▼                      ▼
+┌───────────────┐     ┌────────────────┐
+│  Stats / QR   │     │   KeyN OAuth   │
+│ Visualization │     │   Provider     │
+└───────────────┘     └────────────────┘
+```
+
+### Tech Stack
+*   **Backend**: FastAPI, SQLAlchemy, Alembic, Python 3.11+
+*   **Frontend**: React, TypeScript, Tailwind CSS, Vite
+*   **Auth**: OAuth2 (KeyN Integration)
+
+---
+
+## Configuration
+
+### Backend Environment (`apps/backend/.env`)
+```bash
+KEYN_CLIENT_ID=your_client_id
+KEYN_CLIENT_SECRET=your_client_secret
+FRONTEND_URL=http://localhost:3070
+SERVER_HOST=http://localhost:3071
+```
+
+### Frontend Environment (`apps/frontend/.env`)
+```bash
+VITE_API_URL=http://localhost:3071
+VITE_SHORT_LINK_DOMAIN=localhost:3071
+```
+
+---
+
+## Development
+
+### Directory Structure
 ```
 nololink/
 ├── apps/
-│   ├── backend/        # FastAPI Application
-│   └── frontend/       # React Application
-├── Docs/               # Documentation
-└── Makefile            # Development commands
+│   ├── backend/        # FastAPI Application & Migrations
+│   └── frontend/       # React Application & UI Components
+├── Docs/               # Project Documentation
+└── Makefile            # Orchestration commands
 ```
 
-## Contributing
+---
 
-Contributions are welcome. Please ensure that your code adheres to the existing style and that all tests pass before submitting a pull request.
-
-## License
-
-[MIT License](LICENSE) (or specify your license here)
+<p align="center"><sub>Written, designed, deployed -<strong> byNolo</strong>.</sub></p>
