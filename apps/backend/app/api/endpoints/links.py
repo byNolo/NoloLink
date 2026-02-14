@@ -69,5 +69,23 @@ def delete_link(
     if link.owner_id != current_user.id and not current_user.is_superuser:
         raise HTTPException(status_code=403, detail="Not enough permissions")
     
-    crud_link.delete_link(db=db, db_link=link)
+    db.delete(db_link)
+    db.commit()
+    return link
+
+
+@router.get("/{short_code}/stats", response_model=link_schema.Link)
+def get_link_stats(
+    short_code: str,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(deps.get_current_active_user)
+):
+    link = crud_link.get_link_by_code(db, short_code=short_code)
+    if not link:
+        raise HTTPException(status_code=404, detail="Link not found")
+    
+    # Permission check: Owner or Superuser
+    if link.owner_id != current_user.id and not current_user.is_superuser:
+        raise HTTPException(status_code=403, detail="Not authorized to view stats for this link")
+        
     return link

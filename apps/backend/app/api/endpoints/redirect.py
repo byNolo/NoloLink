@@ -11,6 +11,14 @@ from app.core.config import settings
 
 @router.get("/{short_code}")
 def redirect_to_url(short_code: str, db: Session = Depends(get_db)):
+    print(f"DEBUG: Redirecting short_code='{short_code}'")
+    # Check for stats request (glory to the +)
+    if short_code.endswith("+"):
+        real_code = short_code[:-1]
+        # Redirect to Frontend Stats Page
+        # The frontend will handle auth check and redirect back here if needed
+        return RedirectResponse(f"{settings.FRONTEND_URL}/stats/{real_code}", status_code=status.HTTP_302_FOUND)
+
     # Check for favico or common browser requests to ignore
     if short_code == "favicon.ico":
         raise HTTPException(status_code=404)

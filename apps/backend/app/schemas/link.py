@@ -22,6 +22,13 @@ class LinkCreate(LinkBase):
             raise ValueError('Password must be 72 bytes or less')
         return v
 
+    @field_validator('short_code')
+    @classmethod
+    def validate_short_code(cls, v: Optional[str]) -> Optional[str]:
+        if v and v.endswith("+"):
+             raise ValueError("Short code cannot end with '+'")
+        return v
+
 class LinkUpdate(LinkBase):
     password: Optional[str] = None # If provided, updates the hash
 
@@ -30,6 +37,13 @@ class LinkUpdate(LinkBase):
     def password_max_length(cls, v: Optional[str]) -> Optional[str]:
         if v and len(v.encode('utf-8')) > 72:
             raise ValueError('Password must be 72 bytes or less')
+        return v
+
+    @field_validator('short_code')
+    @classmethod
+    def validate_short_code(cls, v: Optional[str]) -> Optional[str]:
+        if v and v.endswith("+"):
+             raise ValueError("Short code cannot end with '+'")
         return v
 
 class Link(LinkBase):

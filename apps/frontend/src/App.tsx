@@ -6,6 +6,7 @@ import Unauthorized from './pages/Unauthorized';
 import ServerError from './pages/ServerError';
 import VerifyLinkPage from './pages/VerifyLinkPage';
 import ErrorPage from './pages/ErrorPage';
+import StatsPage from './pages/StatsPage';
 
 const Home = () => {
   const { login, isAuthenticated } = useAuth();
@@ -18,7 +19,7 @@ const Home = () => {
     <div className="min-h-screen bg-[#1a1a1a] flex flex-col items-center justify-center p-4 text-white">
       <div className="max-w-md w-full bg-[#242424] shadow-2xl rounded-2xl p-8 border border-gray-800">
         <div className="text-center mb-10">
-          <h1 className="text-5xl font-extrabold bg-gradient-to-r from-blue-500 to-purple-600 bg-clip-text text-transparent mb-4">
+          <h1 className="text-5xl font-extrabold bg-linear-to-r from-blue-500 to-purple-600 bg-clip-text text-transparent mb-4">
             NoloLink
           </h1>
           <p className="text-gray-400 text-lg">Shorten specific links with style.</p>
@@ -49,6 +50,7 @@ export default function App() {
         <Routes>
           <Route path="/" element={<Home />} />
           <Route path="/verify/:shortCode" element={<VerifyLinkPage />} />
+          <Route path="/stats/:shortCode" element={<StatsPage />} />
           <Route path="/error" element={<ErrorPage />} />
           <Route path="/403" element={<Unauthorized />} />
           <Route path="/404" element={<NotFound />} />

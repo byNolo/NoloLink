@@ -20,6 +20,7 @@ interface AuthContextType {
     logout: () => void;
     isAuthenticated: boolean;
     refreshProfile: () => Promise<void>;
+    isLoading: boolean;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -27,6 +28,7 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined);
 export const AuthProvider = ({ children }: { children: ReactNode }) => {
     const [user, setUser] = useState<User | null>(null);
     const [token, setToken] = useState<string | null>(null);
+    const [isLoading, setIsLoading] = useState(true);
 
     useEffect(() => {
         const initAuth = async () => {
@@ -60,6 +62,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
                     }
                 }
             }
+            setIsLoading(false);
         };
 
         initAuth();
@@ -108,7 +111,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     };
 
     return (
-        <AuthContext.Provider value={{ user, token, login, logout, isAuthenticated: !!user, refreshProfile }}>
+        <AuthContext.Provider value={{ user, token, login, logout, isAuthenticated: !!user, refreshProfile, isLoading }}>
             {children}
         </AuthContext.Provider>
     );

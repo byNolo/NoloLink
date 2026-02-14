@@ -51,7 +51,7 @@ export default function ErrorPage() {
                 <div className="flex justify-center">
                     {content.icon}
                 </div>
-                <h1 className="text-3xl font-bold bg-gradient-to-r from-gray-200 to-gray-400 bg-clip-text text-transparent mb-4">
+                <h1 className="text-3xl font-bold bg-linear-to-r from-gray-200 to-gray-400 bg-clip-text text-transparent mb-4">
                     {content.title}
                 </h1>
                 <p className="text-gray-400 text-lg mb-8">{content.message}</p>
