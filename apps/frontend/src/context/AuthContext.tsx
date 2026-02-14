@@ -16,7 +16,7 @@ export interface User {
 interface AuthContextType {
     user: User | null;
     token: string | null;
-    login: () => void;
+    login: (redirectUrl?: string) => void;
     logout: () => void;
     isAuthenticated: boolean;
     refreshProfile: () => Promise<void>;
@@ -42,6 +42,13 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
                 localStorage.setItem('token', urlToken);
                 fetchUserProfile(urlToken);
                 window.history.replaceState({}, document.title, window.location.pathname);
+
+                // Check for redirect URL
+                const redirectUrl = localStorage.getItem('loginRedirectUrl');
+                if (redirectUrl) {
+                    localStorage.removeItem('loginRedirectUrl');
+                    window.location.href = redirectUrl;
+                }
             }
         }
     }, []);
@@ -67,7 +74,10 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         }
     };
 
-    const login = () => {
+    const login = (redirectUrl?: string) => {
+        if (redirectUrl) {
+            localStorage.setItem('loginRedirectUrl', redirectUrl);
+        }
         const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:3071';
         window.location.href = `${apiUrl}/api/auth/login`;
     };

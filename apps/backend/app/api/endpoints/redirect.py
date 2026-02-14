@@ -18,7 +18,22 @@ def redirect_to_url(short_code: str, db: Session = Depends(get_db)):
         return RedirectResponse("http://localhost:3070/404", status_code=status.HTTP_302_FOUND)
     
     if not link.is_active:
-         raise HTTPException(status_code=400, detail="Link is inactive")
+         # Simplified for now, eventually redirect to disabled page
+         return RedirectResponse("http://localhost:3070/error?type=disabled", status_code=status.HTTP_302_FOUND)
+
+    # Build verification params
+    verify_params = []
+    if link.password_hash:
+        verify_params.append("pwd=1")
+    if link.require_login:
+        verify_params.append("login=1")
+
+    if verify_params:
+        query_string = "&".join(verify_params)
+        return RedirectResponse(
+            f"http://localhost:3070/verify/{short_code}?{query_string}", 
+            status_code=status.HTTP_302_FOUND
+        )
 
     # Increment statistics (async task in prod)
     crud_link.increment_clicks(db, link)

@@ -64,3 +64,19 @@ def get_current_active_superuser(
             status_code=400, detail="The user doesn't have enough privileges"
         )
     return current_user
+
+def get_current_user_optional(
+    db: Session = Depends(get_db),
+    token: str = Depends(oauth2_scheme)
+) -> Optional[User]:
+    try:
+        return get_current_user(db, token)
+    except HTTPException:
+        return None
+
+def get_current_active_user_optional(
+    current_user: Optional[User] = Depends(get_current_user_optional),
+) -> Optional[User]:
+    if current_user and not current_user.is_active:
+        return None
+    return current_user

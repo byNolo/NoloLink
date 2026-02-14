@@ -11,6 +11,9 @@ export default function Dashboard() {
     // Create State
     const [newUrl, setNewUrl] = useState('');
     const [createSlug, setCreateSlug] = useState('');
+    const [createPassword, setCreatePassword] = useState('');
+    const [createRequireLogin, setCreateRequireLogin] = useState(false);
+    const [createAllowedEmails, setCreateAllowedEmails] = useState('');
     const [isCreating, setIsCreating] = useState(false);
     const [createError, setCreateError] = useState<string | null>(null);
 
@@ -18,6 +21,10 @@ export default function Dashboard() {
     const [editingLink, setEditingLink] = useState<Link | null>(null);
     const [editUrl, setEditUrl] = useState('');
     const [editSlug, setEditSlug] = useState('');
+    const [editPassword, setEditPassword] = useState('');
+    const [editRequireLogin, setEditRequireLogin] = useState(false);
+    const [editAllowedEmails, setEditAllowedEmails] = useState('');
+    const [shouldClearPassword, setShouldClearPassword] = useState(false);
     const [isSaving, setIsSaving] = useState(false);
     const [editError, setEditError] = useState<string | null>(null);
 
@@ -77,10 +84,17 @@ export default function Dashboard() {
         try {
             setIsCreating(true);
             setCreateError(null);
-            const created = await createLink(token, newUrl, createSlug || undefined);
+            const created = await createLink(token, newUrl, createSlug || undefined, {
+                password: createPassword || undefined,
+                require_login: createRequireLogin,
+                allowed_emails: createAllowedEmails || undefined
+            });
             setLinks([created, ...links]);
             setNewUrl('');
             setCreateSlug('');
+            setCreatePassword('');
+            setCreateRequireLogin(false);
+            setCreateAllowedEmails('');
         } catch (err: any) {
             setCreateError(err.message || 'Failed to create link');
         } finally {
@@ -109,7 +123,10 @@ export default function Dashboard() {
             setEditError(null);
             const updated = await updateLink(token, editingLink.id, {
                 original_url: editUrl,
-                short_code: editSlug !== editingLink.short_code ? editSlug : undefined
+                short_code: editSlug !== editingLink.short_code ? editSlug : undefined,
+                password: shouldClearPassword ? "" : (editPassword || undefined),
+                require_login: editRequireLogin,
+                allowed_emails: editAllowedEmails || undefined
             });
 
             setLinks(links.map(l => l.id === updated.id ? updated : l));
@@ -125,6 +142,9 @@ export default function Dashboard() {
         setEditingLink(link);
         setEditUrl(link.original_url);
         setEditSlug(link.short_code);
+        setEditPassword(''); // Don't show existing hash
+        setEditRequireLogin(link.require_login);
+        setEditAllowedEmails(link.allowed_emails || '');
         setEditError(null);
     }
 
@@ -224,6 +244,45 @@ export default function Dashboard() {
                                             placeholder="my-link"
                                             className="w-full bg-[#2a2a2a] border border-gray-700 rounded-r-xl px-4 py-3 text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
                                         />
+                                    </div>
+                                </div>
+
+                                <div className="border-t border-gray-800 pt-4 mt-2">
+                                    <h3 className="text-sm font-semibold text-gray-300 mb-3">Access Control</h3>
+                                    <div className="space-y-3">
+                                        <div>
+                                            <label className="block text-sm font-medium text-gray-400 mb-1">Password (Optional)</label>
+                                            <input
+                                                type="text"
+                                                value={createPassword}
+                                                onChange={(e) => setCreatePassword(e.target.value)}
+                                                placeholder="Leave empty for none"
+                                                className="w-full bg-[#2a2a2a] border border-gray-700 rounded-xl px-4 py-2 text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all text-sm"
+                                            />
+                                        </div>
+                                        <div className="flex items-center gap-2">
+                                            <input
+                                                type="checkbox"
+                                                id="createRequireLogin"
+                                                checked={createRequireLogin}
+                                                onChange={(e) => setCreateRequireLogin(e.target.checked)}
+                                                className="w-4 h-4 rounded border-gray-700 bg-[#2a2a2a] text-blue-500 focus:ring-blue-500"
+                                            />
+                                            <label htmlFor="createRequireLogin" className="text-sm text-gray-400">Require KeyN Login</label>
+                                        </div>
+                                        {createRequireLogin && (
+                                            <div>
+                                                <label className="block text-sm font-medium text-gray-400 mb-1">Allowed Emails (Optional)</label>
+                                                <input
+                                                    type="text"
+                                                    value={createAllowedEmails}
+                                                    onChange={(e) => setCreateAllowedEmails(e.target.value)}
+                                                    placeholder="bob@gmail.com, alice@keyn.com"
+                                                    className="w-full bg-[#2a2a2a] border border-gray-700 rounded-xl px-4 py-2 text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all text-sm"
+                                                />
+                                                <p className="text-xs text-gray-500 mt-1">Comma separated. Leave empty to allow any logged-in user.</p>
+                                            </div>
+                                        )}
                                     </div>
                                 </div>
                                 <button
@@ -336,6 +395,59 @@ export default function Dashboard() {
                                     className="w-full bg-[#2a2a2a] border border-gray-700 rounded-xl px-4 py-3 text-white focus:ring-2 focus:ring-blue-500 focus:outline-none"
                                 />
                             </div>
+
+                            <div className="border-t border-gray-700 pt-4 mt-2">
+                                <h3 className="text-sm font-semibold text-gray-300 mb-3">Access Control</h3>
+                                <div className="space-y-3">
+                                    <div>
+                                        <label className="block text-sm font-medium text-gray-400 mb-1">Update Password</label>
+                                        <input
+                                            type="text"
+                                            value={editPassword}
+                                            onChange={(e) => setEditPassword(e.target.value)}
+                                            placeholder="Enter new password to update"
+                                            className="w-full bg-[#2a2a2a] border border-gray-700 rounded-xl px-4 py-2 text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all text-sm"
+                                        />
+                                    </div>
+                                    <div className="flex items-center gap-2">
+                                        <input
+                                            type="checkbox"
+                                            id="clearPassword"
+                                            checked={shouldClearPassword}
+                                            onChange={(e) => {
+                                                setShouldClearPassword(e.target.checked);
+                                                if (e.target.checked) setEditPassword('');
+                                            }}
+                                            className="w-4 h-4 rounded border-gray-700 bg-[#2a2a2a] text-red-500 focus:ring-red-500"
+                                        />
+                                        <label htmlFor="clearPassword" className="text-sm text-red-400">Remove Password Protection</label>
+                                    </div>
+                                    <div className="flex items-center gap-2">
+                                        <input
+                                            type="checkbox"
+                                            id="editRequireLogin"
+                                            checked={editRequireLogin}
+                                            onChange={(e) => setEditRequireLogin(e.target.checked)}
+                                            className="w-4 h-4 rounded border-gray-700 bg-[#2a2a2a] text-blue-500 focus:ring-blue-500"
+                                        />
+                                        <label htmlFor="editRequireLogin" className="text-sm text-gray-400">Require KeyN Login</label>
+                                    </div>
+                                    {editRequireLogin && (
+                                        <div>
+                                            <label className="block text-sm font-medium text-gray-400 mb-1">Allowed Emails</label>
+                                            <input
+                                                type="text"
+                                                value={editAllowedEmails}
+                                                onChange={(e) => setEditAllowedEmails(e.target.value)}
+                                                placeholder="bob@gmail.com, alice@keyn.com"
+                                                className="w-full bg-[#2a2a2a] border border-gray-700 rounded-xl px-4 py-2 text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all text-sm"
+                                            />
+                                        </div>
+                                    )}
+                                </div>
+                            </div>
+
+
                             <div className="flex gap-3 mt-6">
                                 <button
                                     type="button"

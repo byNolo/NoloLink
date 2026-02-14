@@ -14,5 +14,15 @@ class Link(Base):
     clicks = Column(Integer, default=0)
     created_at = Column(DateTime(timezone=True), server_default=func.now())
     
+    # Access Control
+    password_hash = Column(String, nullable=True)
+    require_login = Column(Boolean, default=False)
+    allowed_emails = Column(String, nullable=True)  # JSON list of emails
+
+    # Access Control
+    password_hash = Column(String, nullable=True)
+    require_login = Column(Boolean, default=False)
+    allowed_emails = Column(String, nullable=True)  # JSON list of emails
+
     # Relationships
     owner = relationship("User", backref="links") # simplistic backref

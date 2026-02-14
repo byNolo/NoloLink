@@ -4,6 +4,7 @@ import Dashboard from './components/Dashboard';
 import NotFound from './pages/NotFound';
 import Unauthorized from './pages/Unauthorized';
 import ServerError from './pages/ServerError';
+import VerifyLinkPage from './pages/VerifyLinkPage';
 
 const Home = () => {
   const { login, isAuthenticated } = useAuth();
@@ -25,7 +26,7 @@ const Home = () => {
         <div className="text-center">
           <p className="text-gray-300 mb-8">Please login to manage your links.</p>
           <button
-            onClick={login}
+            onClick={() => login()}
             className="bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-6 rounded-xl transition duration-200 flex items-center justify-center w-full shadow-lg hover:shadow-blue-900/20"
           >
             Login with KeyN
@@ -46,6 +47,7 @@ export default function App() {
       <BrowserRouter>
         <Routes>
           <Route path="/" element={<Home />} />
+          <Route path="/verify/:shortCode" element={<VerifyLinkPage />} />
           <Route path="/403" element={<Unauthorized />} />
           <Route path="/404" element={<NotFound />} />
           <Route path="/500" element={<ServerError />} />
