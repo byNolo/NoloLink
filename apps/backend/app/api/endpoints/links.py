@@ -69,8 +69,7 @@ def delete_link(
     if link.owner_id != current_user.id and not current_user.is_superuser:
         raise HTTPException(status_code=403, detail="Not enough permissions")
     
-    db.delete(db_link)
-    db.commit()
+    crud_link.delete_link(db, db_link=link)
     return link
 
 

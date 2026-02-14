@@ -7,13 +7,13 @@ from passlib.context import CryptContext
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 
 def get_link(db: Session, link_id: int):
-    return db.query(Link).filter(Link.id == link_id).first()
+    return db.query(Link).filter(Link.id == link_id, Link.is_deleted == False).first()
 
 def get_link_by_code(db: Session, short_code: str):
-    return db.query(Link).filter(Link.short_code == short_code).first()
+    return db.query(Link).filter(Link.short_code == short_code, Link.is_deleted == False).first()
 
 def get_links_by_owner(db: Session, owner_id: int, skip: int = 0, limit: int = 100):
-    return db.query(Link).filter(Link.owner_id == owner_id).offset(skip).limit(limit).all()
+    return db.query(Link).filter(Link.owner_id == owner_id, Link.is_deleted == False).offset(skip).limit(limit).all()
 
 def create_link(db: Session, link: LinkCreate, owner_id: int):
     code = link.short_code
@@ -76,7 +76,9 @@ def update_link(db: Session, db_link: Link, link_update: LinkUpdate):
     return db_link
 
 def delete_link(db: Session, db_link: Link):
-    db.delete(db_link)
+    db_link.is_deleted = True
+    db_link.is_active = False
+    db.add(db_link)
     db.commit()
 
 def increment_clicks(db: Session, db_link: Link):

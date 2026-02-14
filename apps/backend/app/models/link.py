@@ -11,6 +11,7 @@ class Link(Base):
     original_url = Column(String, nullable=False)
     owner_id = Column(Integer, ForeignKey("users.id"), nullable=False)
     is_active = Column(Boolean, default=True)
+    is_deleted = Column(Boolean, default=False)
     clicks = Column(Integer, default=0)
     created_at = Column(DateTime(timezone=True), server_default=func.now())
     

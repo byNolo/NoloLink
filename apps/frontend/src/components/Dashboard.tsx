@@ -27,6 +27,7 @@ export default function Dashboard() {
     const [editRequireLogin, setEditRequireLogin] = useState(false);
     const [editAllowedEmails, setEditAllowedEmails] = useState('');
     const [editExpiresAt, setEditExpiresAt] = useState('');
+    const [editIsActive, setEditIsActive] = useState(true);
     const [shouldClearPassword, setShouldClearPassword] = useState(false);
     const [isSaving, setIsSaving] = useState(false);
     const [editError, setEditError] = useState<string | null>(null);
@@ -151,7 +152,8 @@ export default function Dashboard() {
                 password: shouldClearPassword ? "" : (editPassword || undefined),
                 require_login: editRequireLogin,
                 allowed_emails: editAllowedEmails || undefined,
-                expires_at: expiresAtISO
+                expires_at: expiresAtISO,
+                is_active: editIsActive
             });
 
             setLinks(links.map(l => l.id === updated.id ? updated : l));
@@ -170,6 +172,7 @@ export default function Dashboard() {
         setEditPassword(''); // Don't show existing hash
         setEditRequireLogin(link.require_login);
         setEditAllowedEmails(link.allowed_emails || '');
+        setEditIsActive(link.is_active);
 
         // Convert UTC ISO string from backend to "YYYY-MM-DDTHH:mm" local time for input
         let localInputValue = '';
@@ -365,7 +368,7 @@ export default function Dashboard() {
                         ) : (
                             <div className="grid gap-4">
                                 {links.map((link) => (
-                                    <div key={link.id} className="group bg-[#1c1c1c] hover:bg-[#252525] p-5 rounded-xl border border-gray-800 hover:border-gray-700 transition-all duration-200 shadow-sm hover:shadow-md">
+                                    <div key={link.id} className={`group bg-[#1c1c1c] hover:bg-[#252525] p-5 rounded-xl border transition-all duration-200 shadow-sm hover:shadow-md ${!link.is_active ? 'border-red-900/30 opacity-75' : 'border-gray-800 hover:border-gray-700'}`}>
                                         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
                                             <div className="flex-1 min-w-0">
                                                 <div className="flex items-center gap-3 mb-1.5">
@@ -384,6 +387,11 @@ export default function Dashboard() {
                                                     >
                                                         <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>
                                                     </button>
+                                                    {!link.is_active && (
+                                                        <span className="w-fit ml-2 px-2 py-0.5 rounded-full bg-red-900/30 text-red-400 text-xs font-medium border border-red-900/50">
+                                                            Disabled
+                                                        </span>
+                                                    )}
                                                 </div>
                                                 <p className="text-gray-400 text-sm truncate pr-4" title={link.original_url}>
                                                     {link.original_url}
@@ -465,6 +473,33 @@ export default function Dashboard() {
                                     required
                                     className="w-full bg-[#2a2a2a] border border-gray-700 rounded-xl px-4 py-3 text-white focus:ring-2 focus:ring-blue-500 focus:outline-none"
                                 />
+                            </div>
+
+                            <div className="border-t border-gray-700 pt-4 mt-2">
+                                <h3 className="text-sm font-semibold text-gray-300 mb-3">Settings</h3>
+                                <div className="space-y-3">
+                                    <div className="flex items-center justify-between p-3 bg-[#2a2a2a] rounded-xl border border-gray-700">
+                                        <div className="flex flex-col">
+                                            <span className="text-sm font-medium text-white">Active Status</span>
+                                            <span className="text-xs text-gray-400">Enable or disable this link</span>
+                                        </div>
+                                        <div className="relative inline-block w-12 mr-2 align-middle select-none">
+                                            <input
+                                                type="checkbox"
+                                                name="toggle"
+                                                id="isActiveToggle"
+                                                checked={editIsActive}
+                                                onChange={(e) => setEditIsActive(e.target.checked)}
+                                                className="toggle-checkbox absolute block w-6 h-6 rounded-full bg-white border-4 appearance-none cursor-pointer transition-transform duration-200 ease-in-out checked:translate-x-full checked:border-blue-600"
+                                                style={{ top: 0, left: 0, marginTop: -2 }}
+                                            />
+                                            <label
+                                                htmlFor="isActiveToggle"
+                                                className={`toggle-label block overflow-hidden h-6 rounded-full cursor-pointer transition-colors duration-200 ${editIsActive ? 'bg-blue-600' : 'bg-gray-600'}`}
+                                            ></label>
+                                        </div>
+                                    </div>
+                                </div>
                             </div>
 
                             <div className="border-t border-gray-700 pt-4 mt-2">
