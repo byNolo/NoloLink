@@ -8,6 +8,7 @@ class LinkBase(BaseModel):
     original_url: str
     short_code: Optional[str] = None # Optional on creation, can be auto-generated
     is_active: Optional[bool] = True
+    track_activity: Optional[bool] = True
     require_login: Optional[bool] = False
     allowed_emails: Optional[str] = None # JSON string
     require_login: Optional[bool] = False
@@ -56,6 +57,12 @@ class Link(LinkBase):
     clicks: int
     created_at: datetime
     # We don't return password_hash
+
+    # Analytics Data (Optional, populated in stats endpoint)
+    clicks_over_time: Optional[list] = None
+    top_countries: Optional[list] = None
+    top_referrers: Optional[list] = None
+    device_breakdown: Optional[list] = None
 
     class Config:
         from_attributes = True

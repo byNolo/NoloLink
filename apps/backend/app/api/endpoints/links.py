@@ -86,5 +86,52 @@ def get_link_stats(
     # Permission check: Owner or Superuser
     if link.owner_id != current_user.id and not current_user.is_superuser:
         raise HTTPException(status_code=403, detail="Not authorized to view stats for this link")
+    
+    # Aggregate Stats
+    from sqlalchemy import func
+    from app.models.analytics import ClickEvent
+    from datetime import datetime, timedelta
+
+    # 1. Clicks Over Time (Last 30 Days)
+    thirty_days_ago = datetime.utcnow() - timedelta(days=30)
+    clicks_over_time_query = db.query(
+        func.date(ClickEvent.timestamp).label('date'),
+        func.count(ClickEvent.id).label('count')
+    ).filter(
+        ClickEvent.link_id == link.id,
+        ClickEvent.timestamp >= thirty_days_ago
+    ).group_by('date').all()
+    
+    link.clicks_over_time = [{"date": str(row.date), "count": row.count} for row in clicks_over_time_query]
+
+    # 2. Top Countries
+    top_countries_query = db.query(
+        ClickEvent.country_code,
+        func.count(ClickEvent.id).label('count')
+    ).filter(
+        ClickEvent.link_id == link.id
+    ).group_by(ClickEvent.country_code).order_by(func.count(ClickEvent.id).desc()).limit(10).all()
+    
+    link.top_countries = [{"country": row.country_code or "Unknown", "count": row.count} for row in top_countries_query]
+
+    # 3. Top Referrers
+    top_referrers_query = db.query(
+        ClickEvent.referrer,
+        func.count(ClickEvent.id).label('count')
+    ).filter(
+        ClickEvent.link_id == link.id
+    ).group_by(ClickEvent.referrer).order_by(func.count(ClickEvent.id).desc()).limit(10).all()
+    
+    link.top_referrers = [{"referrer": row.referrer or "Direct", "count": row.count} for row in top_referrers_query]
+
+    # 4. Device Breakdown
+    device_breakdown_query = db.query(
+        ClickEvent.device_type,
+        func.count(ClickEvent.id).label('count')
+    ).filter(
+        ClickEvent.link_id == link.id
+    ).group_by(ClickEvent.device_type).all()
+    
+    link.device_breakdown = [{"device": row.device_type or "Unknown", "count": row.count} for row in device_breakdown_query]
         
     return link

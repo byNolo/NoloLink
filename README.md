@@ -22,7 +22,7 @@ Shorten · Track · Secure · Manage · Analyze
 |------------|--------------|-------|
 | **Link Management** | Create, edit, and delete short URLs | Custom aliases supported |
 | **Secure Authentication** | Integrated OAuth 2.0 with KeyN | seamless identity management |
-| **Real-time Analytics** | Total click tracking per link | visualized on dashboard |
+| **Advanced Analytics** | Deep insights on audience & traffic | Countries, Referrers, Devices |
 | **Smart Stats Access** | Public stats via `code+` (if owner) | Unauthorized users redirected |
 | **QR Code Integration** | Instant QR generation for sharing | Downloadable & scannable |
 | **Granular Access** | Role-based permissions & approval workflow | Admin controls user onboarding |
@@ -46,10 +46,15 @@ Shorten · Track · Secure · Manage · Analyze
 Modern URL shortening with security at its core:
 *   **Secure Authentication** - Seamless integration with KeyN OAuth for user identity.
 *   **Advanced Link Management** - Create, edit, delete, and manage custom short links.
-*   **Real-time Analytics** - View total clicks and metadata for every link.
+*   **Advanced Analytics** - Comprehensive insights:
+    *   **Traffic Sources**: Top referrers (including direct traffic).
+    *   **Geographic Data**: Top countries by visitor IP.
+    *   **Device Breakdown**: Stats by device type (Mobile, Desktop, Tablet).
+    *   *Privacy Control*: Per-link toggle to enable/disable detailed tracking.
 *   **QR Code Integration** - Auto-generated QR codes for instant mobile sharing.
 *   **Smart Stats Access** - Append `+` to any short link to view its stats (e.g., `s.bynolo.ca/code+`).
     *   *Security Feature*: Only the Link Owner can view stats. Unauthorized users are auto-redirected to the link destination.
+*   **Legal & Compliance** - Built-in Terms of Service and Privacy Policy pages.
 *   **Granular Access Control** - Role-based permissions with an Admin approval system for new users.
 *   **Responsive Experience** - Sleek, dark-themed UI built with React and Tailwind CSS.
 

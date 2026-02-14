@@ -16,6 +16,7 @@ export default function Dashboard() {
     const [createRequireLogin, setCreateRequireLogin] = useState(false);
     const [createAllowedEmails, setCreateAllowedEmails] = useState('');
     const [createExpiresAt, setCreateExpiresAt] = useState('');
+    const [createTrackActivity, setCreateTrackActivity] = useState(true);
     const [isCreating, setIsCreating] = useState(false);
     const [createError, setCreateError] = useState<string | null>(null);
 
@@ -28,6 +29,7 @@ export default function Dashboard() {
     const [editAllowedEmails, setEditAllowedEmails] = useState('');
     const [editExpiresAt, setEditExpiresAt] = useState('');
     const [editIsActive, setEditIsActive] = useState(true);
+    const [editTrackActivity, setEditTrackActivity] = useState(true);
     const [shouldClearPassword, setShouldClearPassword] = useState(false);
     const [isSaving, setIsSaving] = useState(false);
     const [editError, setEditError] = useState<string | null>(null);
@@ -102,7 +104,8 @@ export default function Dashboard() {
                 password: createPassword || undefined,
                 require_login: createRequireLogin,
                 allowed_emails: createAllowedEmails || undefined,
-                expires_at: expiresAtISO
+                expires_at: expiresAtISO,
+                track_activity: createTrackActivity
             });
             setLinks([created, ...links]);
             setNewUrl('');
@@ -111,6 +114,7 @@ export default function Dashboard() {
             setCreateRequireLogin(false);
             setCreateAllowedEmails('');
             setCreateExpiresAt('');
+            setCreateTrackActivity(true);
         } catch (err: any) {
             setCreateError(err.message || 'Failed to create link');
         } finally {
@@ -153,7 +157,8 @@ export default function Dashboard() {
                 require_login: editRequireLogin,
                 allowed_emails: editAllowedEmails || undefined,
                 expires_at: expiresAtISO,
-                is_active: editIsActive
+                is_active: editIsActive,
+                track_activity: editTrackActivity
             });
 
             setLinks(links.map(l => l.id === updated.id ? updated : l));
@@ -173,6 +178,7 @@ export default function Dashboard() {
         setEditRequireLogin(link.require_login);
         setEditAllowedEmails(link.allowed_emails || '');
         setEditIsActive(link.is_active);
+        setEditTrackActivity(link.track_activity);
 
         // Convert UTC ISO string from backend to "YYYY-MM-DDTHH:mm" local time for input
         let localInputValue = '';
@@ -308,6 +314,7 @@ export default function Dashboard() {
                                                 className="w-full bg-[#2a2a2a] border border-gray-700 rounded-xl px-4 py-2 text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all text-sm"
                                             />
                                         </div>
+
                                         <div className="flex items-center gap-2">
                                             <input
                                                 type="checkbox"
@@ -318,6 +325,18 @@ export default function Dashboard() {
                                             />
                                             <label htmlFor="createRequireLogin" className="text-sm text-gray-400">Require KeyN Login</label>
                                         </div>
+
+                                        <div className="flex items-center gap-2">
+                                            <input
+                                                type="checkbox"
+                                                id="createTrackActivity"
+                                                checked={createTrackActivity}
+                                                onChange={(e) => setCreateTrackActivity(e.target.checked)}
+                                                className="w-4 h-4 rounded border-gray-700 bg-[#2a2a2a] text-blue-500 focus:ring-blue-500"
+                                            />
+                                            <label htmlFor="createTrackActivity" className="text-sm text-gray-400">Enable Advanced Analytics</label>
+                                        </div>
+
                                         {createRequireLogin && (
                                             <div>
                                                 <label className="block text-sm font-medium text-gray-400 mb-1">Allowed Emails (Optional)</label>
@@ -449,141 +468,165 @@ export default function Dashboard() {
             </main>
 
             {/* Edit Modal */}
-            {editingLink && (
-                <div className="fixed inset-0 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4 z-50">
-                    <div className="bg-[#1c1c1c] rounded-2xl shadow-2xl border border-gray-800 w-full max-w-lg p-6">
-                        <h2 className="text-xl font-bold mb-6 text-white">Edit Link</h2>
-                        <form onSubmit={handleUpdateLink} className="space-y-4">
-                            <div>
-                                <label className="block text-sm font-medium text-gray-400 mb-1">Destination URL</label>
-                                <input
-                                    type="url"
-                                    value={editUrl}
-                                    onChange={(e) => setEditUrl(e.target.value)}
-                                    required
-                                    className="w-full bg-[#2a2a2a] border border-gray-700 rounded-xl px-4 py-3 text-white focus:ring-2 focus:ring-blue-500 focus:outline-none"
-                                />
-                            </div>
-                            <div>
-                                <label className="block text-sm font-medium text-gray-400 mb-1">Custom Alias</label>
-                                <input
-                                    type="text"
-                                    value={editSlug}
-                                    onChange={(e) => setEditSlug(e.target.value)}
-                                    required
-                                    className="w-full bg-[#2a2a2a] border border-gray-700 rounded-xl px-4 py-3 text-white focus:ring-2 focus:ring-blue-500 focus:outline-none"
-                                />
-                            </div>
+            {
+                editingLink && (
+                    <div className="fixed inset-0 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4 z-50">
+                        <div className="bg-[#1c1c1c] rounded-2xl shadow-2xl border border-gray-800 w-full max-w-lg p-6">
+                            <h2 className="text-xl font-bold mb-6 text-white">Edit Link</h2>
+                            <form onSubmit={handleUpdateLink} className="space-y-4">
+                                <div>
+                                    <label className="block text-sm font-medium text-gray-400 mb-1">Destination URL</label>
+                                    <input
+                                        type="url"
+                                        value={editUrl}
+                                        onChange={(e) => setEditUrl(e.target.value)}
+                                        required
+                                        className="w-full bg-[#2a2a2a] border border-gray-700 rounded-xl px-4 py-3 text-white focus:ring-2 focus:ring-blue-500 focus:outline-none"
+                                    />
+                                </div>
+                                <div>
+                                    <label className="block text-sm font-medium text-gray-400 mb-1">Custom Alias</label>
+                                    <input
+                                        type="text"
+                                        value={editSlug}
+                                        onChange={(e) => setEditSlug(e.target.value)}
+                                        required
+                                        className="w-full bg-[#2a2a2a] border border-gray-700 rounded-xl px-4 py-3 text-white focus:ring-2 focus:ring-blue-500 focus:outline-none"
+                                    />
+                                </div>
 
-                            <div className="border-t border-gray-700 pt-4 mt-2">
-                                <h3 className="text-sm font-semibold text-gray-300 mb-3">Settings</h3>
-                                <div className="space-y-3">
-                                    <div className="flex items-center justify-between p-3 bg-[#2a2a2a] rounded-xl border border-gray-700">
-                                        <div className="flex flex-col">
-                                            <span className="text-sm font-medium text-white">Active Status</span>
-                                            <span className="text-xs text-gray-400">Enable or disable this link</span>
+                                <div className="border-t border-gray-700 pt-4 mt-2">
+                                    <h3 className="text-sm font-semibold text-gray-300 mb-3">Settings</h3>
+                                    <div className="space-y-3">
+                                        <div className="flex items-center justify-between p-3 bg-[#2a2a2a] rounded-xl border border-gray-700">
+                                            <div className="flex flex-col">
+                                                <span className="text-sm font-medium text-white">Active Status</span>
+                                                <span className="text-xs text-gray-400">Enable or disable this link</span>
+                                            </div>
+                                            <div className="relative inline-block w-12 mr-2 align-middle select-none">
+                                                <input
+                                                    type="checkbox"
+                                                    name="toggle"
+                                                    id="isActiveToggle"
+                                                    checked={editIsActive}
+                                                    onChange={(e) => setEditIsActive(e.target.checked)}
+                                                    className="toggle-checkbox absolute block w-6 h-6 rounded-full bg-white border-4 appearance-none cursor-pointer transition-transform duration-200 ease-in-out checked:translate-x-full checked:border-blue-600"
+                                                    style={{ top: 0, left: 0, marginTop: -2 }}
+                                                />
+                                                <label
+                                                    htmlFor="isActiveToggle"
+                                                    className={`toggle-label block overflow-hidden h-6 rounded-full cursor-pointer transition-colors duration-200 ${editIsActive ? 'bg-blue-600' : 'bg-gray-600'}`}
+                                                ></label>
+                                            </div>
                                         </div>
-                                        <div className="relative inline-block w-12 mr-2 align-middle select-none">
-                                            <input
-                                                type="checkbox"
-                                                name="toggle"
-                                                id="isActiveToggle"
-                                                checked={editIsActive}
-                                                onChange={(e) => setEditIsActive(e.target.checked)}
-                                                className="toggle-checkbox absolute block w-6 h-6 rounded-full bg-white border-4 appearance-none cursor-pointer transition-transform duration-200 ease-in-out checked:translate-x-full checked:border-blue-600"
-                                                style={{ top: 0, left: 0, marginTop: -2 }}
-                                            />
-                                            <label
-                                                htmlFor="isActiveToggle"
-                                                className={`toggle-label block overflow-hidden h-6 rounded-full cursor-pointer transition-colors duration-200 ${editIsActive ? 'bg-blue-600' : 'bg-gray-600'}`}
-                                            ></label>
+
+                                        <div className="flex items-center justify-between p-3 bg-[#2a2a2a] rounded-xl border border-gray-700">
+                                            <div className="flex flex-col">
+                                                <span className="text-sm font-medium text-white">Advanced Analytics</span>
+                                                <span className="text-xs text-gray-400">Track clicks, countries, and devices</span>
+                                            </div>
+                                            <div className="relative inline-block w-12 mr-2 align-middle select-none">
+                                                <input
+                                                    type="checkbox"
+                                                    name="toggleAnalytics"
+                                                    id="trackActivityToggle"
+                                                    checked={editTrackActivity}
+                                                    onChange={(e) => setEditTrackActivity(e.target.checked)}
+                                                    className="toggle-checkbox absolute block w-6 h-6 rounded-full bg-white border-4 appearance-none cursor-pointer transition-transform duration-200 ease-in-out checked:translate-x-full checked:border-blue-600"
+                                                    style={{ top: 0, left: 0, marginTop: -2 }}
+                                                />
+                                                <label
+                                                    htmlFor="trackActivityToggle"
+                                                    className={`toggle-label block overflow-hidden h-6 rounded-full cursor-pointer transition-colors duration-200 ${editTrackActivity ? 'bg-blue-600' : 'bg-gray-600'}`}
+                                                ></label>
+                                            </div>
                                         </div>
                                     </div>
                                 </div>
-                            </div>
 
-                            <div className="border-t border-gray-700 pt-4 mt-2">
-                                <h3 className="text-sm font-semibold text-gray-300 mb-3">Access Control</h3>
-                                <div className="space-y-3">
-                                    <div>
-                                        <label className="block text-sm font-medium text-gray-400 mb-1">Update Password</label>
-                                        <input
-                                            type="text"
-                                            value={editPassword}
-                                            onChange={(e) => setEditPassword(e.target.value)}
-                                            placeholder="Enter new password to update"
-                                            className="w-full bg-[#2a2a2a] border border-gray-700 rounded-xl px-4 py-2 text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all text-sm"
-                                        />
-                                    </div>
-                                    <div className="flex items-center gap-2">
-                                        <input
-                                            type="checkbox"
-                                            id="clearPassword"
-                                            checked={shouldClearPassword}
-                                            onChange={(e) => {
-                                                setShouldClearPassword(e.target.checked);
-                                                if (e.target.checked) setEditPassword('');
-                                            }}
-                                            className="w-4 h-4 rounded border-gray-700 bg-[#2a2a2a] text-red-500 focus:ring-red-500"
-                                        />
-                                        <label htmlFor="clearPassword" className="text-sm text-red-400">Remove Password Protection</label>
-                                    </div>
-                                    <div className="flex items-center gap-2">
-                                        <input
-                                            type="checkbox"
-                                            id="editRequireLogin"
-                                            checked={editRequireLogin}
-                                            onChange={(e) => setEditRequireLogin(e.target.checked)}
-                                            className="w-4 h-4 rounded border-gray-700 bg-[#2a2a2a] text-blue-500 focus:ring-blue-500"
-                                        />
-                                        <label htmlFor="editRequireLogin" className="text-sm text-gray-400">Require KeyN Login</label>
-                                    </div>
-                                    {editRequireLogin && (
+                                <div className="border-t border-gray-700 pt-4 mt-2">
+                                    <h3 className="text-sm font-semibold text-gray-300 mb-3">Access Control</h3>
+                                    <div className="space-y-3">
                                         <div>
-                                            <label className="block text-sm font-medium text-gray-400 mb-1">Allowed Emails</label>
+                                            <label className="block text-sm font-medium text-gray-400 mb-1">Update Password</label>
                                             <input
                                                 type="text"
-                                                value={editAllowedEmails}
-                                                onChange={(e) => setEditAllowedEmails(e.target.value)}
-                                                placeholder="bob@gmail.com, alice@keyn.com"
+                                                value={editPassword}
+                                                onChange={(e) => setEditPassword(e.target.value)}
+                                                placeholder="Enter new password to update"
                                                 className="w-full bg-[#2a2a2a] border border-gray-700 rounded-xl px-4 py-2 text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all text-sm"
                                             />
                                         </div>
-                                    )}
-                                    <div>
-                                        <label className="block text-sm font-medium text-gray-400 mb-1">Expiration Date</label>
-                                        <input
-                                            type="datetime-local"
-                                            value={editExpiresAt}
-                                            onChange={(e) => setEditExpiresAt(e.target.value)}
-                                            className="w-full bg-[#2a2a2a] border border-gray-700 rounded-xl px-4 py-2 text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all text-sm"
-                                        />
+                                        <div className="flex items-center gap-2">
+                                            <input
+                                                type="checkbox"
+                                                id="clearPassword"
+                                                checked={shouldClearPassword}
+                                                onChange={(e) => {
+                                                    setShouldClearPassword(e.target.checked);
+                                                    if (e.target.checked) setEditPassword('');
+                                                }}
+                                                className="w-4 h-4 rounded border-gray-700 bg-[#2a2a2a] text-red-500 focus:ring-red-500"
+                                            />
+                                            <label htmlFor="clearPassword" className="text-sm text-red-400">Remove Password Protection</label>
+                                        </div>
+                                        <div className="flex items-center gap-2">
+                                            <input
+                                                type="checkbox"
+                                                id="editRequireLogin"
+                                                checked={editRequireLogin}
+                                                onChange={(e) => setEditRequireLogin(e.target.checked)}
+                                                className="w-4 h-4 rounded border-gray-700 bg-[#2a2a2a] text-blue-500 focus:ring-blue-500"
+                                            />
+                                            <label htmlFor="editRequireLogin" className="text-sm text-gray-400">Require KeyN Login</label>
+                                        </div>
+                                        {editRequireLogin && (
+                                            <div>
+                                                <label className="block text-sm font-medium text-gray-400 mb-1">Allowed Emails</label>
+                                                <input
+                                                    type="text"
+                                                    value={editAllowedEmails}
+                                                    onChange={(e) => setEditAllowedEmails(e.target.value)}
+                                                    placeholder="bob@gmail.com, alice@keyn.com"
+                                                    className="w-full bg-[#2a2a2a] border border-gray-700 rounded-xl px-4 py-2 text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all text-sm"
+                                                />
+                                            </div>
+                                        )}
+                                        <div>
+                                            <label className="block text-sm font-medium text-gray-400 mb-1">Expiration Date</label>
+                                            <input
+                                                type="datetime-local"
+                                                value={editExpiresAt}
+                                                onChange={(e) => setEditExpiresAt(e.target.value)}
+                                                className="w-full bg-[#2a2a2a] border border-gray-700 rounded-xl px-4 py-2 text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all text-sm"
+                                            />
+                                        </div>
                                     </div>
                                 </div>
-                            </div>
 
-                            <div className="flex gap-3 mt-6">
-                                <button
-                                    type="button"
-                                    onClick={() => setEditingLink(null)}
-                                    className="flex-1 px-4 py-2 bg-gray-800 hover:bg-gray-700 text-gray-300 rounded-xl transition-colors"
-                                >
-                                    Cancel
-                                </button>
-                                <button
-                                    type="submit"
-                                    disabled={isSaving}
-                                    className="flex-1 px-4 py-2 bg-blue-600 hover:bg-blue-500 text-white font-semibold rounded-xl transition-colors disabled:opacity-50"
-                                >
-                                    {isSaving ? 'Saving...' : 'Save Changes'}
-                                </button>
-                            </div>
-                            {editError && <p className="text-red-400 text-sm text-center">{editError}</p>}
-                        </form>
+                                <div className="flex gap-3 mt-6">
+                                    <button
+                                        type="button"
+                                        onClick={() => setEditingLink(null)}
+                                        className="flex-1 px-4 py-2 bg-gray-800 hover:bg-gray-700 text-gray-300 rounded-xl transition-colors"
+                                    >
+                                        Cancel
+                                    </button>
+                                    <button
+                                        type="submit"
+                                        disabled={isSaving}
+                                        className="flex-1 px-4 py-2 bg-blue-600 hover:bg-blue-500 text-white font-semibold rounded-xl transition-colors disabled:opacity-50"
+                                    >
+                                        {isSaving ? 'Saving...' : 'Save Changes'}
+                                    </button>
+                                </div>
+                                {editError && <p className="text-red-400 text-sm text-center">{editError}</p>}
+                            </form>
+                        </div>
                     </div>
-                </div>
-            )}
-        </div >
+                )
+            }
+        </div>
     );
 }
 

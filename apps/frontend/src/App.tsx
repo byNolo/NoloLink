@@ -1,4 +1,4 @@
-import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
+import { BrowserRouter, Routes, Route, Navigate, Link } from 'react-router-dom';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import Dashboard from './components/Dashboard';
 import NotFound from './pages/NotFound';
@@ -7,6 +7,8 @@ import ServerError from './pages/ServerError';
 import VerifyLinkPage from './pages/VerifyLinkPage';
 import ErrorPage from './pages/ErrorPage';
 import StatsPage from './pages/StatsPage';
+import TermsOfService from './pages/TermsOfService';
+import PrivacyPolicy from './pages/PrivacyPolicy';
 
 const Home = () => {
   const { login, isAuthenticated } = useAuth();
@@ -36,7 +38,11 @@ const Home = () => {
         </div>
 
         <div className="mt-8 pt-8 border-t border-gray-800 text-center text-gray-600 text-sm">
-          &copy; 2026 NoloLink. All rights reserved.
+          <p>&copy; 2026 NoloLink. All rights reserved.</p>
+          <div className="mt-3 flex justify-center gap-4 text-xs font-medium">
+            <Link to="/tos" className="hover:text-blue-400 transition-colors">Terms of Service</Link>
+            <Link to="/privacy" className="hover:text-blue-400 transition-colors">Privacy Policy</Link>
+          </div>
         </div>
       </div>
     </div>
@@ -51,6 +57,8 @@ export default function App() {
           <Route path="/" element={<Home />} />
           <Route path="/verify/:shortCode" element={<VerifyLinkPage />} />
           <Route path="/stats/:shortCode" element={<StatsPage />} />
+          <Route path="/tos" element={<TermsOfService />} />
+          <Route path="/privacy" element={<PrivacyPolicy />} />
           <Route path="/error" element={<ErrorPage />} />
           <Route path="/403" element={<Unauthorized />} />
           <Route path="/404" element={<NotFound />} />

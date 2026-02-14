@@ -1,6 +1,10 @@
 import { useEffect, useState } from 'react';
 import { useParams, Link as RouterLink } from 'react-router-dom';
 import QRCode from 'react-qr-code';
+import {
+    AreaChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer,
+    PieChart, Pie, Cell, Legend
+} from 'recharts';
 import { useAuth } from '../context/AuthContext';
 import { fetchLinkStats } from '../lib/api';
 import type { Link } from '../lib/api';
@@ -67,7 +71,8 @@ export default function StatsPage() {
 
     if (!link) return null;
 
-    const shortUrl = `${import.meta.env.VITE_SHORT_LINK_DOMAIN?.includes('localhost') ? 'http' : 'https'}://${import.meta.env.VITE_SHORT_LINK_DOMAIN || 'localhost:3071'}/${link.short_code}`;
+    // Check if advanced analytics are enabled
+    const hasAnalytics = link.track_activity;
 
     return (
         <div className="min-h-screen bg-[#111] text-gray-100 font-sans">
@@ -99,7 +104,7 @@ export default function StatsPage() {
                 </div>
             </nav>
 
-            <main className="max-w-4xl mx-auto px-4 py-8">
+            <main className="max-w-6xl mx-auto px-4 py-8">
                 <div className="mb-6 flex items-center justify-between">
                     <div>
                         <h1 className="text-3xl font-bold text-white mb-2">Link Statistics</h1>
@@ -112,50 +117,147 @@ export default function StatsPage() {
                     </RouterLink>
                 </div>
 
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                    {/* Main Stats Card */}
-                    <div className="bg-[#1c1c1c] rounded-2xl border border-gray-800 p-8 shadow-xl">
-                        <div className="flex flex-col items-center justify-center text-center h-full">
-                            <div className="text-6xl font-bold text-white mb-2">{link.clicks}</div>
-                            <div className="text-sm text-gray-500 font-medium uppercase tracking-wider mb-8">Total Clicks</div>
-
-                            <div className="w-full space-y-4">
-                                <div className="bg-[#252525] p-4 rounded-xl border border-gray-800 text-left">
-                                    <label className="text-xs text-gray-500 uppercase tracking-wider block mb-1">Destination</label>
-                                    <div className="text-white truncate" title={link.original_url}>{link.original_url}</div>
-                                </div>
-                                <div className="bg-[#252525] p-4 rounded-xl border border-gray-800 text-left">
-                                    <label className="text-xs text-gray-500 uppercase tracking-wider block mb-1">Short URL</label>
-                                    <a href={shortUrl} target="_blank" rel="noreferrer" className="text-blue-400 hover:text-blue-300 truncate block font-mono">
-                                        {shortUrl}
-                                    </a>
-                                </div>
-                                <div className="bg-[#252525] p-4 rounded-xl border border-gray-800 text-left">
-                                    <label className="text-xs text-gray-500 uppercase tracking-wider block mb-1">Created</label>
-                                    <div className="text-gray-300">
-                                        {new Date(link.created_at).toLocaleString()}
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
+                {/* Top Cards Grid */}
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+                    {/* Total Clicks */}
+                    <div className="bg-[#1c1c1c] rounded-2xl border border-gray-800 p-6 shadow-xl flex flex-col justify-center items-center">
+                        <div className="text-6xl font-bold text-white mb-2">{link.clicks}</div>
+                        <div className="text-sm text-gray-500 font-medium uppercase tracking-wider">Total Clicks</div>
                     </div>
 
-                    {/* QR Code Card */}
-                    <div className="bg-[#1c1c1c] rounded-2xl border border-gray-800 p-8 shadow-xl flex flex-col items-center justify-center">
-                        <h2 className="text-xl font-bold text-white mb-6">QR Code</h2>
-                        <div className="bg-white p-4 rounded-xl">
+                    {/* QR Code */}
+                    <div className="bg-[#1c1c1c] rounded-2xl border border-gray-800 p-6 shadow-xl flex flex-col items-center justify-center">
+                        <div className="bg-white p-2 rounded-xl mb-3">
                             <QRCode
-                                value={shortUrl}
-                                size={200}
+                                value={`${import.meta.env.VITE_SHORT_LINK_DOMAIN?.includes('localhost') ? 'http' : 'https'}://${import.meta.env.VITE_SHORT_LINK_DOMAIN || 'localhost:3071'}/${link.short_code}`}
+                                size={100}
                                 style={{ height: "auto", maxWidth: "100%", width: "100%" }}
                                 viewBox={`0 0 256 256`}
                             />
                         </div>
-                        <p className="text-gray-500 text-sm mt-6 text-center max-w-xs">
-                            Scan to visit <span className="text-blue-400">/{link.short_code}</span>
-                        </p>
+                        <span className="text-xs text-gray-500">Scan to visit</span>
+                    </div>
+
+                    {/* Link Info */}
+                    <div className="bg-[#1c1c1c] rounded-2xl border border-gray-800 p-6 shadow-xl flex flex-col justify-center space-y-4">
+                        <div>
+                            <label className="text-xs text-gray-500 uppercase tracking-wider block mb-1">Destination</label>
+                            <div className="text-white truncate text-sm" title={link.original_url}>{link.original_url}</div>
+                        </div>
+                        <div>
+                            <label className="text-xs text-gray-500 uppercase tracking-wider block mb-1">Tracking</label>
+                            <div className={`text-sm font-medium ${link.track_activity ? 'text-green-400' : 'text-yellow-500'}`}>
+                                {link.track_activity ? 'Advanced Analytics Enabled' : 'Basic Tracking Only'}
+                            </div>
+                        </div>
                     </div>
                 </div>
+
+                {!hasAnalytics ? (
+                    <div className="bg-yellow-900/10 border border-yellow-900/20 rounded-2xl p-8 text-center text-yellow-500">
+                        <h3 className="text-xl font-bold mb-2">Advanced Analytics Disabled</h3>
+                        <p>Enable "Track Activity" in the link settings to see detailed charts and insights.</p>
+                    </div>
+                ) : (
+                    <>
+                        {/* Clicks Over Time */}
+                        <div className="bg-[#1c1c1c] rounded-2xl border border-gray-800 p-6 shadow-xl mb-8">
+                            <h3 className="text-lg font-bold text-white mb-6">Clicks Over Last 30 Days</h3>
+                            <div className="h-64 w-full">
+                                <ResponsiveContainer width="100%" height="100%">
+                                    <AreaChart data={link.clicks_over_time}>
+                                        <defs>
+                                            <linearGradient id="colorClicks" x1="0" y1="0" x2="0" y2="1">
+                                                <stop offset="5%" stopColor="#3b82f6" stopOpacity={0.8} />
+                                                <stop offset="95%" stopColor="#3b82f6" stopOpacity={0} />
+                                            </linearGradient>
+                                        </defs>
+                                        <XAxis dataKey="date" stroke="#6b7280" tick={{ fill: '#6b7280', fontSize: 12 }} tickFormatter={(val) => new Date(val).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })} />
+                                        <YAxis stroke="#6b7280" tick={{ fill: '#6b7280', fontSize: 12 }} allowDecimals={false} />
+                                        <Tooltip
+                                            contentStyle={{ backgroundColor: '#252525', borderColor: '#374151', color: '#fff' }}
+                                            itemStyle={{ color: '#fff' }}
+                                            labelStyle={{ color: '#9ca3af' }}
+                                        />
+                                        <Area type="monotone" dataKey="count" stroke="#3b82f6" fillOpacity={1} fill="url(#colorClicks)" />
+                                    </AreaChart>
+                                </ResponsiveContainer>
+                            </div>
+                        </div>
+
+                        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                            {/* Top Countries */}
+                            <div className="bg-[#1c1c1c] rounded-2xl border border-gray-800 p-6 shadow-xl">
+                                <h3 className="text-lg font-bold text-white mb-4">Top Countries</h3>
+                                <div className="space-y-3">
+                                    {(link.top_countries || []).length > 0 ? (
+                                        link.top_countries?.map((item, idx) => (
+                                            <div key={idx} className="flex justify-between items-center">
+                                                <span className="text-gray-300">{item.country || 'Unknown'}</span>
+                                                <div className="flex items-center gap-2">
+                                                    <div className="w-24 bg-gray-800 rounded-full h-2 overflow-hidden">
+                                                        <div className="bg-blue-500 h-full" style={{ width: `${(item.count / (link.clicks || 1)) * 100}%` }}></div>
+                                                    </div>
+                                                    <span className="text-gray-500 text-sm w-8 text-right">{item.count}</span>
+                                                </div>
+                                            </div>
+                                        ))
+                                    ) : (
+                                        <p className="text-gray-500 text-sm">No data yet</p>
+                                    )}
+                                </div>
+                            </div>
+
+                            {/* Top Referrers */}
+                            <div className="bg-[#1c1c1c] rounded-2xl border border-gray-800 p-6 shadow-xl">
+                                <h3 className="text-lg font-bold text-white mb-4">Top Referrers</h3>
+                                <div className="space-y-3">
+                                    {(link.top_referrers || []).length > 0 ? (
+                                        link.top_referrers?.map((item, idx) => (
+                                            <div key={idx} className="flex justify-between items-center">
+                                                <span className="text-gray-300 truncate max-w-[150px]" title={item.referrer}>{item.referrer || 'Direct'}</span>
+                                                <span className="text-gray-500 text-sm bg-gray-800 px-2 py-1 rounded-md">{item.count}</span>
+                                            </div>
+                                        ))
+                                    ) : (
+                                        <p className="text-gray-500 text-sm">No data yet</p>
+                                    )}
+                                </div>
+                            </div>
+
+                            {/* Device Breakdown */}
+                            <div className="bg-[#1c1c1c] rounded-2xl border border-gray-800 p-6 shadow-xl">
+                                <h3 className="text-lg font-bold text-white mb-4">Devices</h3>
+                                <div className="h-48">
+                                    {(link.device_breakdown || []).length > 0 ? (
+                                        <ResponsiveContainer width="100%" height="100%">
+                                            <PieChart>
+                                                <Pie
+                                                    data={link.device_breakdown}
+                                                    cx="50%"
+                                                    cy="50%"
+                                                    innerRadius={40}
+                                                    outerRadius={70}
+                                                    paddingAngle={5}
+                                                    dataKey="count"
+                                                    nameKey="device"
+                                                >
+                                                    {(link.device_breakdown || []).map((_, index) => (
+                                                        <Cell key={`cell-${index}`} fill={['#3b82f6', '#8b5cf6', '#ec4899', '#f59e0b'][index % 4]} />
+                                                    ))}
+                                                </Pie>
+                                                <Tooltip contentStyle={{ backgroundColor: '#252525', borderColor: '#374151', color: '#fff' }} />
+                                                <Legend />
+                                            </PieChart>
+                                        </ResponsiveContainer>
+                                    ) : (
+                                        <div className="flex items-center justify-center h-full text-gray-500 text-sm">No data yet</div>
+                                    )}
+                                </div>
+                            </div>
+                        </div>
+                    </>
+                )}
             </main>
         </div>
     );

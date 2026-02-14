@@ -1,1 +1,31 @@
 Generic single-database configuration.
+
+# Database Migrations
+
+This project uses **Alembic** for database migrations.
+
+## Workflow
+
+1.  **Make Changes to Models**: Modify your SQLAlchemy models in `app/models/`.
+2.  **Generate Migration**: Create a new migration script based on your changes.
+    ```bash
+    cd apps/backend
+    poetry run alembic revision --autogenerate -m "Description of changes"
+    ```
+3.  **Review Migration**: Check the generated file in `alembic/versions/` to ensure it looks correct.
+4.  **Apply Migration**: Update the database to the latest version.
+    ```bash
+    poetry run alembic upgrade head
+    ```
+
+## Common Commands
+
+-   **Upgrade to latest**: `poetry run alembic upgrade head`
+-   **Downgrade by one**: `poetry run alembic downgrade -1`
+-   **Show current revision**: `poetry run alembic current`
+-   **Show history**: `poetry run alembic history`
+
+## Troubleshooting
+
+-   **"Target database is not up to date"**: This means your database is behind. Run `upgrade head`.
+-   **Model changes not detected**: Ensure your model is imported in `alembic/env.py` under the `target_metadata` section.

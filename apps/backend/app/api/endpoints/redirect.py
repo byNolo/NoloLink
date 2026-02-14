@@ -9,8 +9,11 @@ router = APIRouter()
 
 from app.core.config import settings
 
+from fastapi import APIRouter, Depends, HTTPException, status, Request
+from app.utils.analytics import capture_click
+
 @router.get("/{short_code}")
-def redirect_to_url(short_code: str, db: Session = Depends(get_db)):
+def redirect_to_url(short_code: str, request: Request, db: Session = Depends(get_db)):
     print(f"DEBUG: Redirecting short_code='{short_code}'")
     # Check for stats request (glory to the +)
     if short_code.endswith("+"):
@@ -52,5 +55,11 @@ def redirect_to_url(short_code: str, db: Session = Depends(get_db)):
 
     # Increment statistics (async task in prod)
     crud_link.increment_clicks(db, link)
+
+    # Capture detailed analytics
+    try:
+        capture_click(db, link, request)
+    except Exception as e:
+        print(f"Error capturing click analytics: {e}")
     
     return RedirectResponse(link.original_url, status_code=status.HTTP_302_FOUND)
