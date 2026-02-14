@@ -101,4 +101,5 @@ def verify_link_access(
     # Increment statistics
     crud_link.increment_clicks(db, link)
 
+    print(f"VERIFY SUCCESS: {short_code} -> {link.original_url}")
     return {"original_url": link.original_url}

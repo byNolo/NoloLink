@@ -84,5 +84,5 @@ def callback(code: str, state: str, db: Session = Depends(get_db)):
     # Let's redirect to frontend with the raw token for now (NOT SECURE FOR PROD, but okay for checking flow).
     # TODO: Implement proper JWT issuance.
     
-    frontend_url = f"http://localhost:3070?token={access_token}&username={db_user.username}"
+    frontend_url = f"{settings.FRONTEND_URL}?token={access_token}&username={db_user.username}"
     return RedirectResponse(frontend_url)

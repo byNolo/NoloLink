@@ -9,7 +9,8 @@ from app.db.session import get_db
 from app.models.user import User
 from app.crud.user import get_user_by_keyn_id
 
-oauth2_scheme = OAuth2PasswordBearer(tokenUrl="token") # Not actually used for flow, but needed for Swagger UI
+oauth2_scheme = OAuth2PasswordBearer(tokenUrl="token")
+oauth2_scheme_optional = OAuth2PasswordBearer(tokenUrl="token", auto_error=False)
 
 def get_current_user(
     db: Session = Depends(get_db),
@@ -67,8 +68,10 @@ def get_current_active_superuser(
 
 def get_current_user_optional(
     db: Session = Depends(get_db),
-    token: str = Depends(oauth2_scheme)
+    token: Optional[str] = Depends(oauth2_scheme_optional)
 ) -> Optional[User]:
+    if not token:
+        return None
     try:
         return get_current_user(db, token)
     except HTTPException:

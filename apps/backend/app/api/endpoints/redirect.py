@@ -6,6 +6,8 @@ from app.crud import link as crud_link
 
 router = APIRouter()
 
+from app.core.config import settings
+
 @router.get("/{short_code}")
 def redirect_to_url(short_code: str, db: Session = Depends(get_db)):
     # Check for favico or common browser requests to ignore
@@ -15,11 +17,11 @@ def redirect_to_url(short_code: str, db: Session = Depends(get_db)):
     link = crud_link.get_link_by_code(db, short_code=short_code)
     if not link:
         # Redirect to frontend 404 page
-        return RedirectResponse("http://localhost:3070/404", status_code=status.HTTP_302_FOUND)
+        return RedirectResponse(f"{settings.FRONTEND_URL}/404", status_code=status.HTTP_302_FOUND)
     
     if not link.is_active:
          # Simplified for now, eventually redirect to disabled page
-         return RedirectResponse("http://localhost:3070/error?type=disabled", status_code=status.HTTP_302_FOUND)
+         return RedirectResponse(f"{settings.FRONTEND_URL}/error?type=disabled", status_code=status.HTTP_302_FOUND)
 
     # Build verification params
     verify_params = []
@@ -31,7 +33,7 @@ def redirect_to_url(short_code: str, db: Session = Depends(get_db)):
     if verify_params:
         query_string = "&".join(verify_params)
         return RedirectResponse(
-            f"http://localhost:3070/verify/{short_code}?{query_string}", 
+            f"{settings.FRONTEND_URL}/verify/{short_code}?{query_string}", 
             status_code=status.HTTP_302_FOUND
         )
 

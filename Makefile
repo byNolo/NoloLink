@@ -14,3 +14,62 @@ run-frontend:
 
 run-all:
 	make run-backend & make run-frontend
+
+# Deployment Configuration
+ROOT_DIR := $(shell pwd)
+PID_DIR := $(ROOT_DIR)/.deploy
+BACKEND_PID_FILE := $(PID_DIR)/backend.pid
+FRONTEND_PID_FILE := $(PID_DIR)/frontend.pid
+LOG_DIR := $(PID_DIR)/logs
+ENV_FILE ?= .env.prod
+
+deploy:
+	@mkdir -p $(PID_DIR) $(LOG_DIR)
+	@if [ ! -f $(ENV_FILE) ]; then \
+		echo "Error: Deployment environment file '$(ENV_FILE)' not found."; \
+		echo "Please create it or specify another file with ENV_FILE=path/to/env make deploy"; \
+		exit 1; \
+	fi
+	@echo "Using env file: $(ENV_FILE)"
+	@make prod-stop
+	@echo "Starting Deployment..."
+	
+	# Frontend Build & Deploy
+	@echo "[Frontend] Installing dependencies..."
+	@cd apps/frontend && npm ci
+	@echo "[Frontend] Building with $(ENV_FILE)..."
+	@cp $(ROOT_DIR)/$(ENV_FILE) apps/frontend/.env.production.local
+	@cd apps/frontend && npm run build
+	@echo "[Frontend] Serving..."
+	@cd apps/frontend && \
+		nohup npx serve -s dist -l 3070 > $(LOG_DIR)/frontend.log 2>&1 & \
+		echo $$! > $(FRONTEND_PID_FILE)
+		
+	# Backend Deploy
+	@echo "[Backend] Starting..."
+	@cd apps/backend && \
+		(set -a; . $(ROOT_DIR)/$(ENV_FILE); set +a; \
+		nohup ./venv/bin/poetry run uvicorn main:app --host 0.0.0.0 --port 3071 > $(LOG_DIR)/backend.log 2>&1 & \
+		echo $$! > $(BACKEND_PID_FILE))
+		
+	@echo "Deployment successfully started in background."
+	@echo "Logs: $(LOG_DIR)"
+	@echo "PIDs: $(PID_DIR)"
+
+prod-stop:
+	@echo "Stopping production deployment..."
+	@if [ -f $(BACKEND_PID_FILE) ]; then \
+		echo "Stopping Backend (PID `cat $(BACKEND_PID_FILE)`)..."; \
+		kill `cat $(BACKEND_PID_FILE)` || true; \
+		rm $(BACKEND_PID_FILE); \
+	else \
+		echo "Backend PID file not found."; \
+	fi
+	@if [ -f $(FRONTEND_PID_FILE) ]; then \
+		echo "Stopping Frontend (PID `cat $(FRONTEND_PID_FILE)`)..."; \
+		kill `cat $(FRONTEND_PID_FILE)` || true; \
+		rm $(FRONTEND_PID_FILE); \
+	else \
+		echo "Frontend PID file not found."; \
+	fi
+	@echo "Stopped."

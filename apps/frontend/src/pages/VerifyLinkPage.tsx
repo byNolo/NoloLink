@@ -17,7 +17,9 @@ export default function VerifyLinkPage() {
     // Auto-verify if only login is required and we are authenticated, OR if we have login option and are authenticated (hybrid)
     // Actually, for hybrid, we should try to verify immediately if authenticated.
     useEffect(() => {
+        console.log("VerifyLinkPage Effect:", { hasLogin, isAuthenticated, token });
         if (hasLogin && isAuthenticated && token) {
+            console.log("Triggering verifyAccess from Effect");
             verifyAccess();
         }
     }, [hasLogin, isAuthenticated, token]);

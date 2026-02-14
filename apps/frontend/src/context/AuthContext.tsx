@@ -29,28 +29,40 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     const [token, setToken] = useState<string | null>(null);
 
     useEffect(() => {
-        const storedToken = localStorage.getItem('token');
-        if (storedToken) {
-            setToken(storedToken);
-            fetchUserProfile(storedToken);
-        } else {
-            // Check for token in URL (callback from backend)
-            const params = new URLSearchParams(window.location.search);
-            const urlToken = params.get('token');
-            if (urlToken) {
-                setToken(urlToken);
-                localStorage.setItem('token', urlToken);
-                fetchUserProfile(urlToken);
-                window.history.replaceState({}, document.title, window.location.pathname);
+        const initAuth = async () => {
+            const storedToken = localStorage.getItem('token');
+            console.log("AuthContext Init: StoredToken=", storedToken);
+            if (storedToken) {
+                setToken(storedToken);
+                await fetchUserProfile(storedToken);
+            } else {
+                // Check for token in URL (callback from backend)
+                const params = new URLSearchParams(window.location.search);
+                const urlToken = params.get('token');
+                console.log("AuthContext Init: URLToken=", urlToken);
+                if (urlToken) {
+                    console.log("AuthContext: Setting token from URL");
+                    setToken(urlToken);
+                    localStorage.setItem('token', urlToken);
 
-                // Check for redirect URL
-                const redirectUrl = localStorage.getItem('loginRedirectUrl');
-                if (redirectUrl) {
-                    localStorage.removeItem('loginRedirectUrl');
-                    window.location.href = redirectUrl;
+                    // Wait for profile fetch (and potential logout on failure)
+                    await fetchUserProfile(urlToken);
+
+                    window.history.replaceState({}, document.title, window.location.pathname);
+
+                    // Check for redirect URL
+                    const redirectUrl = localStorage.getItem('loginRedirectUrl');
+                    console.log("AuthContext: RedirectUrl=", redirectUrl);
+                    if (redirectUrl) {
+                        localStorage.removeItem('loginRedirectUrl');
+                        console.log("AuthContext: Redirecting to", redirectUrl);
+                        window.location.href = redirectUrl;
+                    }
                 }
             }
-        }
+        };
+
+        initAuth();
     }, []);
 
     const fetchUserProfile = async (authToken: string) => {
