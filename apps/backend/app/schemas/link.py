@@ -10,6 +10,7 @@ class LinkBase(BaseModel):
     is_active: Optional[bool] = True
     require_login: Optional[bool] = False
     allowed_emails: Optional[str] = None # JSON string
+    expires_at: Optional[datetime] = None
 
 class LinkCreate(LinkBase):
     password: Optional[str] = None

@@ -3,6 +3,7 @@ from fastapi.responses import RedirectResponse
 from sqlalchemy.orm import Session
 from app.db.session import get_db
 from app.crud import link as crud_link
+from datetime import datetime
 
 router = APIRouter()
 
@@ -20,8 +21,12 @@ def redirect_to_url(short_code: str, db: Session = Depends(get_db)):
         return RedirectResponse(f"{settings.FRONTEND_URL}/404", status_code=status.HTTP_302_FOUND)
     
     if not link.is_active:
-         # Simplified for now, eventually redirect to disabled page
          return RedirectResponse(f"{settings.FRONTEND_URL}/error?type=disabled", status_code=status.HTTP_302_FOUND)
+
+
+
+    if link.expires_at and link.expires_at.replace(tzinfo=None) < datetime.utcnow():
+         return RedirectResponse(f"{settings.FRONTEND_URL}/error?type=expired", status_code=status.HTTP_302_FOUND)
 
     # Build verification params
     verify_params = []

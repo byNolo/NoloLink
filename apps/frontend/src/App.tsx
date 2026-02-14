@@ -5,6 +5,7 @@ import NotFound from './pages/NotFound';
 import Unauthorized from './pages/Unauthorized';
 import ServerError from './pages/ServerError';
 import VerifyLinkPage from './pages/VerifyLinkPage';
+import ErrorPage from './pages/ErrorPage';
 
 const Home = () => {
   const { login, isAuthenticated } = useAuth();
@@ -48,6 +49,7 @@ export default function App() {
         <Routes>
           <Route path="/" element={<Home />} />
           <Route path="/verify/:shortCode" element={<VerifyLinkPage />} />
+          <Route path="/error" element={<ErrorPage />} />
           <Route path="/403" element={<Unauthorized />} />
           <Route path="/404" element={<NotFound />} />
           <Route path="/500" element={<ServerError />} />

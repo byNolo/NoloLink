@@ -18,11 +18,9 @@ class Link(Base):
     password_hash = Column(String, nullable=True)
     require_login = Column(Boolean, default=False)
     allowed_emails = Column(String, nullable=True)  # JSON list of emails
+    expires_at = Column(DateTime(timezone=True), nullable=True)
 
-    # Access Control
-    password_hash = Column(String, nullable=True)
-    require_login = Column(Boolean, default=False)
-    allowed_emails = Column(String, nullable=True)  # JSON list of emails
+
 
     # Relationships
     owner = relationship("User", backref="links") # simplistic backref

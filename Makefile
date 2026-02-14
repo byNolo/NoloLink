@@ -58,18 +58,11 @@ deploy:
 
 prod-stop:
 	@echo "Stopping production deployment..."
-	@if [ -f $(BACKEND_PID_FILE) ]; then \
-		echo "Stopping Backend (PID `cat $(BACKEND_PID_FILE)`)..."; \
-		kill `cat $(BACKEND_PID_FILE)` || true; \
-		rm $(BACKEND_PID_FILE); \
-	else \
-		echo "Backend PID file not found."; \
-	fi
-	@if [ -f $(FRONTEND_PID_FILE) ]; then \
-		echo "Stopping Frontend (PID `cat $(FRONTEND_PID_FILE)`)..."; \
-		kill `cat $(FRONTEND_PID_FILE)` || true; \
-		rm $(FRONTEND_PID_FILE); \
-	else \
-		echo "Frontend PID file not found."; \
-	fi
+	@echo "Stopping Backend (Port 3071)..."
+	@fuser -k -n tcp 3071 || echo "Backend not running on port 3071."
+	@if [ -f $(BACKEND_PID_FILE) ]; then rm $(BACKEND_PID_FILE); fi
+
+	@echo "Stopping Frontend (Port 3070)..."
+	@fuser -k -n tcp 3070 || echo "Frontend not running on port 3070."
+	@if [ -f $(FRONTEND_PID_FILE) ]; then rm $(FRONTEND_PID_FILE); fi
 	@echo "Stopped."

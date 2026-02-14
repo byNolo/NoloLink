@@ -40,7 +40,8 @@ def create_link(db: Session, link: LinkCreate, owner_id: int):
         is_active=link.is_active,
         require_login=link.require_login,
         allowed_emails=link.allowed_emails,
-        password_hash=password_hash
+        password_hash=password_hash,
+        expires_at=link.expires_at
     )
     db.add(db_link)
     db.commit()
@@ -58,8 +59,10 @@ def update_link(db: Session, db_link: Link, link_update: LinkUpdate):
     
     db_link.original_url = str(link_update.original_url)
     db_link.is_active = link_update.is_active
+
     db_link.require_login = link_update.require_login
     db_link.allowed_emails = link_update.allowed_emails
+    db_link.expires_at = link_update.expires_at
     
     if link_update.password is not None:
         if link_update.password == "":

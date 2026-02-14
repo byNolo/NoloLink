@@ -14,6 +14,7 @@ export default function Dashboard() {
     const [createPassword, setCreatePassword] = useState('');
     const [createRequireLogin, setCreateRequireLogin] = useState(false);
     const [createAllowedEmails, setCreateAllowedEmails] = useState('');
+    const [createExpiresAt, setCreateExpiresAt] = useState('');
     const [isCreating, setIsCreating] = useState(false);
     const [createError, setCreateError] = useState<string | null>(null);
 
@@ -24,6 +25,7 @@ export default function Dashboard() {
     const [editPassword, setEditPassword] = useState('');
     const [editRequireLogin, setEditRequireLogin] = useState(false);
     const [editAllowedEmails, setEditAllowedEmails] = useState('');
+    const [editExpiresAt, setEditExpiresAt] = useState('');
     const [shouldClearPassword, setShouldClearPassword] = useState(false);
     const [isSaving, setIsSaving] = useState(false);
     const [editError, setEditError] = useState<string | null>(null);
@@ -84,10 +86,21 @@ export default function Dashboard() {
         try {
             setIsCreating(true);
             setCreateError(null);
+
+            // Convert local input time to UTC ISO string for backend
+            let expiresAtISO: string | undefined;
+            if (createExpiresAt) {
+                // createExpiresAt is "YYYY-MM-DDTHH:mm" (local)
+                // Create date object treating input as local time
+                const localDate = new Date(createExpiresAt);
+                expiresAtISO = localDate.toISOString();
+            }
+
             const created = await createLink(token, newUrl, createSlug || undefined, {
                 password: createPassword || undefined,
                 require_login: createRequireLogin,
-                allowed_emails: createAllowedEmails || undefined
+                allowed_emails: createAllowedEmails || undefined,
+                expires_at: expiresAtISO
             });
             setLinks([created, ...links]);
             setNewUrl('');
@@ -95,6 +108,7 @@ export default function Dashboard() {
             setCreatePassword('');
             setCreateRequireLogin(false);
             setCreateAllowedEmails('');
+            setCreateExpiresAt('');
         } catch (err: any) {
             setCreateError(err.message || 'Failed to create link');
         } finally {
@@ -121,12 +135,22 @@ export default function Dashboard() {
         try {
             setIsSaving(true);
             setEditError(null);
+
+            // Convert local input time to UTC ISO string for backend
+            let expiresAtISO: string | undefined;
+            if (editExpiresAt) {
+                // editExpiresAt is "YYYY-MM-DDTHH:mm" (local)
+                const localDate = new Date(editExpiresAt);
+                expiresAtISO = localDate.toISOString();
+            }
+
             const updated = await updateLink(token, editingLink.id, {
                 original_url: editUrl,
                 short_code: editSlug !== editingLink.short_code ? editSlug : undefined,
                 password: shouldClearPassword ? "" : (editPassword || undefined),
                 require_login: editRequireLogin,
-                allowed_emails: editAllowedEmails || undefined
+                allowed_emails: editAllowedEmails || undefined,
+                expires_at: expiresAtISO
             });
 
             setLinks(links.map(l => l.id === updated.id ? updated : l));
@@ -145,6 +169,26 @@ export default function Dashboard() {
         setEditPassword(''); // Don't show existing hash
         setEditRequireLogin(link.require_login);
         setEditAllowedEmails(link.allowed_emails || '');
+
+        // Convert UTC ISO string from backend to "YYYY-MM-DDTHH:mm" local time for input
+        let localInputValue = '';
+        if (link.expires_at) {
+            // Ensure string is treated as UTC if it lacks timezone info
+            const isoString = link.expires_at.endsWith('Z') ? link.expires_at : link.expires_at + 'Z';
+            const date = new Date(isoString);
+
+            // To get "YYYY-MM-DDTHH:mm" in local time, we need to manually format it
+            // or use a trick with toISOString by shifting the time.
+            // Manual formatting is safer.
+            const year = date.getFullYear();
+            const month = String(date.getMonth() + 1).padStart(2, '0');
+            const day = String(date.getDate()).padStart(2, '0');
+            const hours = String(date.getHours()).padStart(2, '0');
+            const minutes = String(date.getMinutes()).padStart(2, '0');
+            localInputValue = `${year}-${month}-${day}T${hours}:${minutes}`;
+        }
+        setEditExpiresAt(localInputValue);
+
         setEditError(null);
     }
 
@@ -283,6 +327,15 @@ export default function Dashboard() {
                                                 <p className="text-xs text-gray-500 mt-1">Comma separated. Leave empty to allow any logged-in user.</p>
                                             </div>
                                         )}
+                                        <div>
+                                            <label className="block text-sm font-medium text-gray-400 mb-1">Expiration Date (Optional)</label>
+                                            <input
+                                                type="datetime-local"
+                                                value={createExpiresAt}
+                                                onChange={(e) => setCreateExpiresAt(e.target.value)}
+                                                className="w-full bg-[#2a2a2a] border border-gray-700 rounded-xl px-4 py-2 text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all text-sm"
+                                            />
+                                        </div>
                                     </div>
                                 </div>
                                 <button
@@ -334,6 +387,14 @@ export default function Dashboard() {
                                                 <p className="text-gray-400 text-sm truncate pr-4" title={link.original_url}>
                                                     {link.original_url}
                                                 </p>
+                                                {link.expires_at && (
+                                                    <div className="flex items-center gap-1 mt-2 text-xs text-yellow-500/80">
+                                                        <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                                                        </svg>
+                                                        <span>Expires {new Date(link.expires_at.endsWith('Z') ? link.expires_at : link.expires_at + 'Z').toLocaleString()}</span>
+                                                    </div>
+                                                )}
                                             </div>
 
                                             <div className="flex items-center gap-4 border-t sm:border-t-0 sm:border-l border-gray-800 pt-4 sm:pt-0 sm:pl-6 mt-2 sm:mt-0">
@@ -444,9 +505,17 @@ export default function Dashboard() {
                                             />
                                         </div>
                                     )}
+                                    <div>
+                                        <label className="block text-sm font-medium text-gray-400 mb-1">Expiration Date</label>
+                                        <input
+                                            type="datetime-local"
+                                            value={editExpiresAt}
+                                            onChange={(e) => setEditExpiresAt(e.target.value)}
+                                            className="w-full bg-[#2a2a2a] border border-gray-700 rounded-xl px-4 py-2 text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all text-sm"
+                                        />
+                                    </div>
                                 </div>
                             </div>
-
 
                             <div className="flex gap-3 mt-6">
                                 <button
@@ -469,7 +538,7 @@ export default function Dashboard() {
                     </div>
                 </div>
             )}
-        </div>
+        </div >
     );
 }
 
