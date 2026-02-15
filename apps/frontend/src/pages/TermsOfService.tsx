@@ -2,7 +2,7 @@ import Navbar from '../components/Navbar';
 
 export default function TermsOfService() {
     return (
-        <div className="min-h-screen bg-[#111] text-gray-100 font-sans">
+        <div className="min-h-screen bg-[#111] text-gray-100 font-sans animate-fade-in">
             <Navbar />
 
             <main className="max-w-4xl mx-auto px-4 py-12">

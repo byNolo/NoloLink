@@ -1,1 +1,27 @@
 @import "tailwindcss";
+
+@layer base {
+
+    html,
+    body {
+        background-color: #111;
+        color: #f3f4f6;
+        /* gray-100 */
+    }
+}
+
+@theme {
+    --animate-fade-in: fade-in 0.3s ease-out;
+
+    @keyframes fade-in {
+        0% {
+            opacity: 0;
+            transform: translateY(10px);
+        }
+
+        100% {
+            opacity: 1;
+            transform: translateY(0);
+        }
+    }
+}

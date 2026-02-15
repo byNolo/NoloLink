@@ -18,7 +18,7 @@ const Home = () => {
   }
 
   return (
-    <div className="min-h-screen bg-[#1a1a1a] flex flex-col items-center justify-center p-4 text-white">
+    <div className="min-h-screen bg-[#1a1a1a] flex flex-col items-center justify-center p-4 text-white animate-fade-in">
       <div className="max-w-md w-full bg-[#242424] shadow-2xl rounded-2xl p-8 border border-gray-800">
         <div className="text-center mb-10">
           <img src="/logo.svg" alt="NoloLink Logo" className="w-24 h-24 mx-auto mb-6" />
