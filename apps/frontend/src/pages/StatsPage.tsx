@@ -8,10 +8,11 @@ import {
 import { useAuth } from '../context/AuthContext';
 import { fetchLinkStats } from '../lib/api';
 import type { Link } from '../lib/api';
+import Navbar from '../components/Navbar';
 
 export default function StatsPage() {
     const { shortCode } = useParams<{ shortCode: string }>();
-    const { token, user, isLoading: authLoading } = useAuth();
+    const { token, isLoading: authLoading } = useAuth();
     const [link, setLink] = useState<Link | null>(null);
     const [isLoading, setIsLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
@@ -76,33 +77,7 @@ export default function StatsPage() {
 
     return (
         <div className="min-h-screen bg-[#111] text-gray-100 font-sans">
-            <nav className="border-b border-gray-800 bg-[#161616]">
-                <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-                    <div className="flex justify-between h-16 items-center">
-                        <div className="flex items-center gap-2">
-                            <RouterLink to="/" className="flex items-center gap-2 hover:opacity-80 transition-opacity">
-                                <div className="bg-linear-to-tr from-blue-500 to-purple-600 w-8 h-8 rounded-lg flex items-center justify-center font-bold text-white shadow-lg shadow-blue-500/20">
-                                    N
-                                </div>
-                                <span className="text-xl font-bold bg-linear-to-r from-blue-400 to-purple-500 bg-clip-text text-transparent">
-                                    NoloLink
-                                </span>
-                            </RouterLink>
-                        </div>
-                        <div className="flex items-center gap-4">
-                            <RouterLink to="/" className="text-gray-400 hover:text-white transition-colors">
-                                Dashboard
-                            </RouterLink>
-                            <div className="flex items-center gap-3 bg-[#222] px-3 py-1.5 rounded-full border border-gray-700">
-                                <div className="w-6 h-6 rounded-full bg-linear-to-br from-gray-600 to-gray-800 flex items-center justify-center text-xs text-white">
-                                    {user?.username?.charAt(0).toUpperCase()}
-                                </div>
-                                <span className="text-sm font-medium text-gray-300">{user?.username}</span>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </nav>
+            <Navbar />
 
             <main className="max-w-6xl mx-auto px-4 py-8">
                 <div className="mb-6 flex items-center justify-between">

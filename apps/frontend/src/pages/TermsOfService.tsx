@@ -1,29 +1,9 @@
-import { Link } from 'react-router-dom';
+import Navbar from '../components/Navbar';
 
 export default function TermsOfService() {
     return (
         <div className="min-h-screen bg-[#111] text-gray-100 font-sans">
-            <nav className="border-b border-gray-800 bg-[#161616]">
-                <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-                    <div className="flex justify-between h-16 items-center">
-                        <div className="flex items-center gap-2">
-                            <Link to="/" className="flex items-center gap-2 hover:opacity-80 transition-opacity">
-                                <div className="bg-linear-to-tr from-blue-500 to-purple-600 w-8 h-8 rounded-lg flex items-center justify-center font-bold text-white shadow-lg shadow-blue-500/20">
-                                    N
-                                </div>
-                                <span className="text-xl font-bold bg-linear-to-r from-blue-400 to-purple-500 bg-clip-text text-transparent">
-                                    NoloLink
-                                </span>
-                            </Link>
-                        </div>
-                        <div className="flex items-center gap-4">
-                            <Link to="/" className="text-gray-400 hover:text-white transition-colors">
-                                Dashboard
-                            </Link>
-                        </div>
-                    </div>
-                </div>
-            </nav>
+            <Navbar />
 
             <main className="max-w-4xl mx-auto px-4 py-12">
                 <div className="bg-[#1c1c1c] rounded-2xl border border-gray-800 p-8 shadow-xl">

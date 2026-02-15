@@ -21,6 +21,7 @@ const Home = () => {
     <div className="min-h-screen bg-[#1a1a1a] flex flex-col items-center justify-center p-4 text-white">
       <div className="max-w-md w-full bg-[#242424] shadow-2xl rounded-2xl p-8 border border-gray-800">
         <div className="text-center mb-10">
+          <img src="/logo.svg" alt="NoloLink Logo" className="w-24 h-24 mx-auto mb-6" />
           <h1 className="text-5xl font-extrabold bg-linear-to-r from-blue-500 to-purple-600 bg-clip-text text-transparent mb-4">
             NoloLink
           </h1>
