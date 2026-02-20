@@ -36,8 +36,9 @@ Shorten · Track · Secure · Manage · Analyze
 2. [Quick Start](#quick-start)
 3. [Architecture](#architecture)
 4. [Configuration](#configuration)
-5. [Development](#development)
-6. [License](#license)
+5. [Testing](#testing)
+6. [Development](#development)
+7. [License](#license)
 
 ---
 
@@ -147,16 +148,51 @@ VITE_SHORT_LINK_DOMAIN=localhost:3071
 
 ---
 
+## Testing
+
+NoloLink has a comprehensive test suite covering both backend and frontend.
+
+### Quick Commands
+
+```bash
+make test            # Run all tests (backend + frontend)
+make test-backend    # Backend only — 76 tests (pytest)
+make test-frontend   # Frontend only — 48 tests (Vitest)
+```
+
+### Test Coverage
+
+| Suite | Framework | Tests | Areas Covered |
+|-------|-----------|-------|---------------|
+| **Backend** | pytest + TestClient | 76 | Links, Campaigns, Redirect, Verify, Users, Export/Import, Audit |
+| **Frontend** | Vitest + React Testing Library | 48 | Routing, Auth, API layer, Pages, Components |
+
+### Writing New Tests
+
+Each test suite has a detailed guide:
+- **Backend**: [`apps/backend/tests/README.md`](apps/backend/tests/README.md) — fixtures, helpers, patterns
+- **Frontend**: [`apps/frontend/src/test/README.md`](apps/frontend/src/test/README.md) — providers, mocking, interactions
+
+---
+
 ## Development
 
 ### Directory Structure
 ```
 nololink/
 ├── apps/
-│   ├── backend/        # FastAPI Application & Migrations
-│   └── frontend/       # React Application & UI Components
-├── Docs/               # Project Documentation
-└── Makefile            # Orchestration commands
+│   ├── backend/
+│   │   ├── app/            # FastAPI Application & Migrations
+│   │   └── tests/          # Backend test suite (pytest)
+│   └── frontend/
+│       └── src/
+│           ├── components/  # React components
+│           ├── pages/       # Page components
+│           ├── lib/         # API layer
+│           ├── context/     # Auth context
+│           └── test/        # Frontend test suite (Vitest)
+├── Docs/                    # Project Documentation
+└── Makefile                 # Orchestration & testing commands
 ```
 
 ---

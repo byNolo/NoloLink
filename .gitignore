@@ -1,4 +1,5 @@
 .deploy/
+file::memory:
 
 # Python
 __pycache__/

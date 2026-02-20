@@ -1,4 +1,13 @@
-.PHONY: backend-install frontend-install run-backend run-frontend
+.PHONY: backend-install frontend-install run-backend run-frontend test-backend test-frontend test
+
+test-backend:
+	cd apps/backend && poetry run pytest tests/ -v --tb=short
+
+test-frontend:
+	cd apps/frontend && npx vitest run
+
+test:
+	make test-backend && make test-frontend
 
 backend-install:
 	cd apps/backend && ./venv/bin/poetry install
