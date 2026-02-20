@@ -46,6 +46,12 @@ Shorten · Track · Secure · Manage · Analyze
 Modern URL shortening with security at its core:
 *   **Secure Authentication** - Seamless integration with KeyN OAuth for user identity.
 *   **Advanced Link Management** - Create, edit, delete, and manage custom short links.
+*   **Campaign Management** - Organize links into campaigns for better tracking and management.
+*   **Bulk Operations** - Efficiently create and edit multiple links simultaneously.
+*   **Enhanced Link Control** - Granular control with:
+    *   **Expiration Dates**: Set links to auto-expire.
+    *   **Custom Redirects**: Support for 301, 302, 307, and 308 status codes.
+    *   **Tags**: Categorize links for easy filtering.
 *   **Advanced Analytics** - Comprehensive insights:
     *   **Traffic Sources**: Top referrers (including direct traffic).
     *   **Geographic Data**: Top countries by visitor IP.

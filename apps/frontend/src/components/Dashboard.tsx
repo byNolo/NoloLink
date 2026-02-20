@@ -2,14 +2,49 @@ import * as React from 'react';
 import { useState, useEffect } from 'react';
 import { Link as RouterLink } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
-import { fetchLinks, createLink, updateLink, deleteLink } from '../lib/api';
-import type { Link } from '../lib/api';
+import { fetchLinks, createLink, updateLink, deleteLink, fetchCampaigns, createCampaign, deleteCampaign, createLinksBulk, updateLinksBulk } from '../lib/api';
+import type { Link, Campaign } from '../lib/api';
 import AdminPanel from './AdminPanel';
 import Navbar from './Navbar';
+
+const TriStateToggle = ({ label, value, onChange }: { label: string, value: boolean | null, onChange: (val: boolean | null) => void }) => (
+    <div>
+        <label className="block text-sm font-medium text-gray-400 mb-2">{label}</label>
+        <div className="flex bg-[#0f0f0f] rounded-xl p-1 border border-gray-800">
+            <button
+                type="button"
+                onClick={() => onChange(null)}
+                className={`flex-1 py-1.5 text-xs font-medium rounded-lg transition-all ${value === null ? 'bg-gray-700 text-white shadow-sm' : 'text-gray-500 hover:text-gray-300'}`}
+            >
+                No Change
+            </button>
+            <button
+                type="button"
+                onClick={() => onChange(true)}
+                className={`flex-1 py-1.5 text-xs font-medium rounded-lg transition-all ${value === true ? 'bg-blue-600 text-white shadow-sm' : 'text-gray-500 hover:text-gray-300'}`}
+            >
+                Yes
+            </button>
+            <button
+                type="button"
+                onClick={() => onChange(false)}
+                className={`flex-1 py-1.5 text-xs font-medium rounded-lg transition-all ${value === false ? 'bg-red-900/30 text-red-200 border border-red-900/50 shadow-sm' : 'text-gray-500 hover:text-gray-300'}`}
+            >
+                No
+            </button>
+        </div>
+    </div>
+);
 
 export default function Dashboard() {
     const { token, user, refreshProfile } = useAuth();
     const [links, setLinks] = useState<Link[]>([]);
+    const [campaigns, setCampaigns] = useState<Campaign[]>([]);
+
+    // Filtering State
+    const [searchQuery, setSearchQuery] = useState('');
+    const [filterCampaignId, setFilterCampaignId] = useState<number | null>(null);
+    const [filterStatus, setFilterStatus] = useState<boolean | null>(null); // null=all, true=active, false=inactive
 
     // Create State
     const [newUrl, setNewUrl] = useState('');
@@ -22,8 +57,29 @@ export default function Dashboard() {
     const [createAllowedEmails, setCreateAllowedEmails] = useState('');
     const [createExpiresAt, setCreateExpiresAt] = useState('');
     const [createTrackActivity, setCreateTrackActivity] = useState(true);
+    const [createCampaignId, setCreateCampaignId] = useState<number | null>(null);
     const [isCreating, setIsCreating] = useState(false);
     const [createError, setCreateError] = useState<string | null>(null);
+
+    // Bulk Create State
+    const [showBulkModal, setShowBulkModal] = useState(false);
+    const [bulkUrls, setBulkUrls] = useState('');
+    const [isBulkCreating, setIsBulkCreating] = useState(false);
+
+    // Bulk Edit State
+    const [selectedLinkIds, setSelectedLinkIds] = useState<Set<number>>(new Set());
+    const [showBulkEditModal, setShowBulkEditModal] = useState(false);
+    const [isBulkSaving, setIsBulkSaving] = useState(false);
+
+    // Bulk Edit Form State
+    const [bulkEditCampaignId, setBulkEditCampaignId] = useState<number | number | null>(null); // -1 for clear
+    const [bulkEditTags, setBulkEditTags] = useState('');
+    const [bulkEditIsActive, setBulkEditIsActive] = useState<boolean | null>(null);
+    const [bulkEditRequireLogin, setBulkEditRequireLogin] = useState<boolean | null>(null);
+    const [bulkEditTrackActivity, setBulkEditTrackActivity] = useState<boolean | null>(null);
+    const [bulkEditRedirectType, setBulkEditRedirectType] = useState<number | null>(null);
+    const [bulkEditExpiresAt, setBulkEditExpiresAt] = useState('');
+    const [bulkEditError, setBulkEditError] = useState<string | null>(null);
 
     // Edit State
     const [editingLink, setEditingLink] = useState<Link | null>(null);
@@ -32,6 +88,7 @@ export default function Dashboard() {
     const [editTitle, setEditTitle] = useState('');
     const [editTags, setEditTags] = useState('');
     const [editRedirectType, setEditRedirectType] = useState(302);
+    const [editCampaignId, setEditCampaignId] = useState<number | null>(null);
     const [editPassword, setEditPassword] = useState('');
     const [editRequireLogin, setEditRequireLogin] = useState(false);
     const [editAllowedEmails, setEditAllowedEmails] = useState('');
@@ -42,6 +99,10 @@ export default function Dashboard() {
     const [isSaving, setIsSaving] = useState(false);
     const [editError, setEditError] = useState<string | null>(null);
 
+    // Campaign Manager State
+    const [newCampaignName, setNewCampaignName] = useState('');
+    const [isCreatingCampaign, setIsCreatingCampaign] = useState(false);
+
     // Request Access State
     const [isRequesting, setIsRequesting] = useState(false);
     const [showAdminPanel, setShowAdminPanel] = useState(false);
@@ -50,24 +111,40 @@ export default function Dashboard() {
 
     useEffect(() => {
         if (token && (user?.is_approved || user?.is_superuser)) {
-            loadLinks();
+            loadData();
         } else {
             setIsLoading(false);
         }
     }, [token, user?.is_approved, user?.is_superuser]);
 
-    async function loadLinks() {
+    async function loadData() {
         try {
             if (!token) return;
             setIsLoading(true);
-            const data = await fetchLinks(token);
-            setLinks(data);
+            const [linksData, campaignsData] = await Promise.all([
+                fetchLinks(token, {
+                    search: searchQuery,
+                    campaign_id: filterCampaignId || undefined,
+                    is_active: filterStatus === null ? undefined : filterStatus
+                }),
+                fetchCampaigns(token)
+            ]);
+            setLinks(linksData);
+            setCampaigns(campaignsData);
         } catch (err) {
             console.error(err);
         } finally {
             setIsLoading(false);
         }
     }
+
+    useEffect(() => {
+        if (token && (user?.is_approved || user?.is_superuser)) {
+            loadData();
+        } else {
+            setIsLoading(false);
+        }
+    }, [token, user?.is_approved, user?.is_superuser, searchQuery, filterCampaignId, filterStatus]);
 
     async function handleRequestAccess() {
         if (!token) return;
@@ -116,7 +193,8 @@ export default function Dashboard() {
                 track_activity: createTrackActivity,
                 title: createTitle || undefined,
                 tags: createTags || undefined,
-                redirect_type: createRedirectType
+                redirect_type: createRedirectType,
+                campaign_id: createCampaignId || undefined
             });
             setLinks([created, ...links]);
             setNewUrl('');
@@ -124,6 +202,7 @@ export default function Dashboard() {
             setCreateTitle('');
             setCreateTags('');
             setCreateRedirectType(302);
+            setCreateCampaignId(null);
             setCreatePassword('');
             setCreateRequireLogin(false);
             setCreateAllowedEmails('');
@@ -133,6 +212,33 @@ export default function Dashboard() {
             setCreateError(err.message || 'Failed to create link');
         } finally {
             setIsCreating(false);
+        }
+    }
+
+    async function handleCreateCampaign(e: React.FormEvent) {
+        e.preventDefault();
+        if (!newCampaignName.trim() || !token) return;
+        try {
+            setIsCreatingCampaign(true);
+            const campaign = await createCampaign(token, newCampaignName);
+            setCampaigns([...campaigns, campaign]);
+            setNewCampaignName('');
+        } catch (err) {
+            alert('Failed to create campaign');
+        } finally {
+            setIsCreatingCampaign(false);
+        }
+    }
+
+    async function handleDeleteCampaign(id: number) {
+        if (!confirm('Are you sure? This will NOT delete the links, just untag them.')) return;
+        if (!token) return;
+        try {
+            await deleteCampaign(token, id);
+            setCampaigns(campaigns.filter(c => c.id !== id));
+            if (filterCampaignId === id) setFilterCampaignId(null);
+        } catch (err) {
+            alert('Failed to delete campaign');
         }
     }
 
@@ -175,7 +281,8 @@ export default function Dashboard() {
                 track_activity: editTrackActivity,
                 title: editTitle || undefined,
                 tags: editTags || undefined,
-                redirect_type: editRedirectType
+                redirect_type: editRedirectType,
+                campaign_id: editCampaignId || undefined
             });
 
             setLinks(links.map(l => l.id === updated.id ? updated : l));
@@ -187,6 +294,72 @@ export default function Dashboard() {
         }
     }
 
+    // Bulk Selection Helpers
+    function toggleLinkSelection(id: number) {
+        const newSelected = new Set(selectedLinkIds);
+        if (newSelected.has(id)) {
+            newSelected.delete(id);
+        } else {
+            newSelected.add(id);
+        }
+        setSelectedLinkIds(newSelected);
+    }
+
+    function toggleSelectAll() {
+        if (selectedLinkIds.size === links.length && links.length > 0) {
+            setSelectedLinkIds(new Set());
+        } else {
+            setSelectedLinkIds(new Set(links.map(l => l.id)));
+        }
+    }
+
+    async function handleBulkUpdate(e: React.FormEvent) {
+        e.preventDefault();
+        if (selectedLinkIds.size === 0 || !token) return;
+
+        try {
+            setIsBulkSaving(true);
+            setBulkEditError(null);
+
+            // Convert local input time to UTC ISO string for backend
+            let expiresAtISO: string | undefined;
+            if (bulkEditExpiresAt) {
+                const localDate = new Date(bulkEditExpiresAt);
+                expiresAtISO = localDate.toISOString();
+            }
+
+            await updateLinksBulk(token, Array.from(selectedLinkIds), {
+                campaign_id: bulkEditCampaignId === null ? undefined : bulkEditCampaignId,
+                tags: bulkEditTags || undefined,
+                is_active: bulkEditIsActive === null ? undefined : bulkEditIsActive,
+                require_login: bulkEditRequireLogin === null ? undefined : bulkEditRequireLogin,
+                track_activity: bulkEditTrackActivity === null ? undefined : bulkEditTrackActivity,
+                redirect_type: bulkEditRedirectType === null ? undefined : bulkEditRedirectType,
+                expires_at: expiresAtISO
+            });
+
+            // Reload data to reflect changes
+            await loadData();
+
+            // Reset state
+            setSelectedLinkIds(new Set());
+            setShowBulkEditModal(false);
+            setBulkEditCampaignId(null);
+            setBulkEditTags('');
+            setBulkEditIsActive(null);
+            setBulkEditRequireLogin(null);
+            setBulkEditTrackActivity(null);
+            setBulkEditTrackActivity(null);
+            setBulkEditRedirectType(null);
+            setBulkEditExpiresAt('');
+
+        } catch (err: any) {
+            setBulkEditError(err.message || 'Failed to update links');
+        } finally {
+            setIsBulkSaving(false);
+        }
+    }
+
     function startEditing(link: Link) {
         setEditingLink(link);
         setEditUrl(link.original_url);
@@ -194,6 +367,7 @@ export default function Dashboard() {
         setEditTitle(link.title || '');
         setEditTags(link.tags || '');
         setEditRedirectType(link.redirect_type || 302);
+        setEditCampaignId(link.campaign_id || null);
         setEditPassword(''); // Don't show existing hash
         setEditRequireLogin(link.require_login);
         setEditAllowedEmails(link.allowed_emails || '');
@@ -287,14 +461,72 @@ export default function Dashboard() {
                 ) : null}
 
                 <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-                    {/* Left Column: Create Link */}
-                    <div className="lg:col-span-1">
-                        <div className="bg-[#1c1c1c] rounded-2xl shadow-xl border border-gray-800 p-6 sticky top-8 transition-transform hover:scale-105 duration-200">
+                    {/* Left Column: Campaigns & Create Link */}
+                    <div className="lg:col-span-1 space-y-8">
+                        {/* Campaigns */}
+                        <div className="bg-[#1c1c1c] rounded-2xl shadow-xl border border-gray-800 p-6">
+                            <h2 className="text-xl font-bold mb-4 text-white">Campaigns</h2>
+                            <div className="space-y-2 mb-4">
+                                <button
+                                    onClick={() => setFilterCampaignId(null)}
+                                    className={`w-full text-left px-4 py-2 rounded-xl transition-all ${filterCampaignId === null ? 'bg-blue-600/20 text-blue-400 border border-blue-600/30' : 'hover:bg-gray-800 text-gray-400'}`}
+                                >
+                                    All Links
+                                </button>
+                                {campaigns.map(c => (
+                                    <div key={c.id} className="group flex items-center gap-2">
+                                        <button
+                                            onClick={() => setFilterCampaignId(c.id)}
+                                            className={`flex-1 text-left px-4 py-2 rounded-xl transition-all truncate ${filterCampaignId === c.id ? 'bg-blue-600/20 text-blue-400 border border-blue-600/30' : 'hover:bg-gray-800 text-gray-400'}`}
+                                        >
+                                            {c.name}
+                                        </button>
+                                        <button
+                                            onClick={() => handleDeleteCampaign(c.id)}
+                                            className="opacity-0 group-hover:opacity-100 p-2 text-gray-600 hover:text-red-400 transition-all"
+                                            title="Delete Campaign"
+                                        >
+                                            <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
+                                        </button>
+                                    </div>
+                                ))}
+                            </div>
+
+                            <form onSubmit={handleCreateCampaign} className="flex gap-2">
+                                <input
+                                    type="text"
+                                    value={newCampaignName}
+                                    onChange={(e) => setNewCampaignName(e.target.value)}
+                                    placeholder="New Campaign..."
+                                    className="flex-1 bg-[#2a2a2a] border border-gray-700 rounded-xl px-3 py-2 text-sm text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                />
+                                <button
+                                    type="submit"
+                                    disabled={isCreatingCampaign || !newCampaignName.trim()}
+                                    className="px-3 py-2 bg-gray-800 hover:bg-gray-700 text-white rounded-xl transition-all disabled:opacity-50"
+                                >
+                                    <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" /></svg>
+                                </button>
+                            </form>
+                        </div>
+
+                        {/* Create Link Card */}
+                        <div className="bg-[#1c1c1c] rounded-2xl shadow-xl border border-gray-800 p-6 sticky top-8 transition-all hover:shadow-lg hover:shadow-blue-900/20 hover:border-blue-500/30 duration-300">
                             <h2 className="text-xl font-bold mb-1 text-white">Create Link</h2>
                             <p className="text-gray-500 text-sm mb-6">Paste a long URL to shorten it.</p>
 
                             <form onSubmit={handleCreateLink} className="space-y-4">
                                 <div>
+                                    <div className="flex justify-end mb-2">
+                                        <button
+                                            type="button"
+                                            onClick={() => setShowBulkModal(true)}
+                                            className="text-xs text-blue-400 hover:text-blue-300 font-medium flex items-center gap-1"
+                                        >
+                                            <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" /></svg>
+                                            Bulk Create
+                                        </button>
+                                    </div>
                                     <label htmlFor="url" className="block text-sm font-medium text-gray-400 mb-1">Destination URL</label>
                                     <input
                                         id="url"
@@ -306,6 +538,22 @@ export default function Dashboard() {
                                         className="w-full bg-[#2a2a2a] border border-gray-700 rounded-xl px-4 py-3 text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
                                     />
                                 </div>
+
+                                {campaigns.length > 0 && (
+                                    <div>
+                                        <label className="block text-sm font-medium text-gray-400 mb-1">Campaign</label>
+                                        <select
+                                            value={createCampaignId || ''}
+                                            onChange={(e) => setCreateCampaignId(e.target.value ? Number(e.target.value) : null)}
+                                            className="w-full bg-[#2a2a2a] border border-gray-700 rounded-xl px-4 py-2 text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all text-sm"
+                                        >
+                                            <option value="">No Campaign</option>
+                                            {campaigns.map(c => (
+                                                <option key={c.id} value={c.id}>{c.name}</option>
+                                            ))}
+                                        </select>
+                                    </div>
+                                )}
                                 <div>
                                     <label htmlFor="slug" className="block text-sm font-medium text-gray-400 mb-1">Custom Alias (Optional)</label>
                                     <div className="flex items-center">
@@ -432,9 +680,50 @@ export default function Dashboard() {
 
                     {/* Right Column: Links List */}
                     <div className="lg:col-span-2 space-y-4">
-                        <div className="flex justify-between items-center mb-2">
-                            <h2 className="text-xl font-bold text-white">Active Links</h2>
-                            <span className="text-sm text-gray-500">{links.length} total</span>
+                        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-2">
+                            <div>
+                                <h2 className="text-xl font-bold text-white">Active Links</h2>
+                                <span className="text-sm text-gray-500">{links.length} results</span>
+                            </div>
+
+                            <div className="flex gap-2 w-full sm:w-auto">
+                                {links.length > 0 && (
+                                    <div
+                                        className="flex items-center gap-2 mr-2 cursor-pointer group"
+                                        onClick={toggleSelectAll}
+                                    >
+                                        <div className={`w-5 h-5 rounded-md border flex items-center justify-center transition-all ${selectedLinkIds.size === links.length && links.length > 0 ? 'bg-blue-600 border-blue-600' : 'bg-[#1c1c1c] border-gray-700 group-hover:border-gray-600'}`}>
+                                            {selectedLinkIds.size === links.length && links.length > 0 && (
+                                                <svg className="w-3.5 h-3.5 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" />
+                                                </svg>
+                                            )}
+                                        </div>
+                                        <span className="text-sm text-gray-400 group-hover:text-gray-300 transition-colors">Select All</span>
+                                    </div>
+                                )}
+                                <div className="relative flex-1 sm:flex-initial">
+                                    <input
+                                        type="text"
+                                        placeholder="Search links..."
+                                        value={searchQuery}
+                                        onChange={(e) => setSearchQuery(e.target.value)}
+                                        className="w-full sm:w-64 bg-[#1c1c1c] border border-gray-700 rounded-xl pl-10 pr-4 py-2 text-sm text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                    />
+                                    <svg className="w-4 h-4 text-gray-500 absolute left-3 top-2.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                                    </svg>
+                                </div>
+                                <select
+                                    value={filterStatus === null ? '' : String(filterStatus)}
+                                    onChange={(e) => setFilterStatus(e.target.value === '' ? null : e.target.value === 'true')}
+                                    className="bg-[#1c1c1c] border border-gray-700 rounded-xl px-3 py-2 text-sm text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                >
+                                    <option value="">All Status</option>
+                                    <option value="true">Active</option>
+                                    <option value="false">Disabled</option>
+                                </select>
+                            </div>
                         </div>
 
                         {links.length === 0 ? (
@@ -442,54 +731,73 @@ export default function Dashboard() {
                                 <p>No links yet. Create your first one!</p>
                             </div>
                         ) : (
-                            <div className="grid gap-4">
+                            <div className="grid gap-4 pb-20">
                                 {links.map((link) => (
-                                    <div key={link.id} className={`group bg-[#1c1c1c] hover:bg-[#252525] p-5 rounded-xl border transition-all duration-200 shadow-sm hover:shadow-md hover:scale-[1.01] ${!link.is_active ? 'border-red-900/30 opacity-75' : 'border-gray-800 hover:border-gray-700'}`}>
+                                    <div key={link.id} className={`group bg-[#1c1c1c] hover:bg-[#252525] p-5 rounded-xl border transition-all duration-200 shadow-sm hover:shadow-md hover:scale-[1.01] ${!link.is_active ? 'border-red-900/30 opacity-75' : 'border-gray-800 hover:border-gray-700'} ${selectedLinkIds.has(link.id) ? 'ring-2 ring-blue-500/50' : ''}`}>
                                         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-                                            <div className="flex-1 min-w-0">
-                                                <div className="flex items-center gap-3 mb-1.5">
-                                                    <a
-                                                        href={`${import.meta.env.VITE_SHORT_LINK_DOMAIN?.includes('localhost') ? 'http' : 'https'}://${import.meta.env.VITE_SHORT_LINK_DOMAIN || 'localhost:3071'}/${link.short_code}`}
-                                                        target="_blank"
-                                                        rel="noreferrer"
-                                                        className="text-lg font-bold text-blue-400 hover:text-blue-300 transition-colors tracking-tight font-mono"
-                                                    >
-                                                        {import.meta.env.VITE_SHORT_LINK_DOMAIN || 'localhost:3071'}/{link.short_code}
-                                                    </a>
-                                                    <button
-                                                        onClick={() => copyToClipboard(link.short_code)}
-                                                        className="text-gray-500 hover:text-white bg-gray-800/50 hover:bg-gray-700 p-1.5 rounded-md transition-all"
-                                                        title="Copy"
-                                                    >
-                                                        <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>
-                                                    </button>
-                                                    {!link.is_active && (
-                                                        <span className="w-fit ml-2 px-2 py-0.5 rounded-full bg-red-900/30 text-red-400 text-xs font-medium border border-red-900/50">
-                                                            Disabled
-                                                        </span>
-                                                    )}
-                                                    {link.title && <span className="text-white font-medium ml-2">- {link.title}</span>}
+                                            <div className="flex items-start gap-4 flex-1 min-w-0">
+                                                <div className="pt-1.5" onClick={() => toggleLinkSelection(link.id)}>
+                                                    <div className={`w-5 h-5 rounded-md border flex items-center justify-center cursor-pointer transition-all ${selectedLinkIds.has(link.id) ? 'bg-blue-600 border-blue-600' : 'bg-[#2a2a2a] border-gray-700 hover:border-gray-500'}`}>
+                                                        {selectedLinkIds.has(link.id) && (
+                                                            <svg className="w-3.5 h-3.5 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" />
+                                                            </svg>
+                                                        )}
+                                                    </div>
                                                 </div>
-                                                <p className="text-gray-400 text-sm truncate pr-4" title={link.original_url}>
-                                                    {link.original_url}
-                                                </p>
-                                                {link.tags && (
-                                                    <div className="flex flex-wrap gap-1 mt-1">
-                                                        {link.tags.split(',').map((tag, i) => (
-                                                            <span key={i} className="px-2 py-0.5 rounded-md bg-gray-800 text-xs text-gray-400 border border-gray-700">
-                                                                {tag.trim()}
+                                                <div className="flex-1 min-w-0">
+                                                    <div className="flex items-center gap-3 mb-1.5">
+                                                        <a
+                                                            href={`${import.meta.env.VITE_SHORT_LINK_DOMAIN?.includes('localhost') ? 'http' : 'https'}://${import.meta.env.VITE_SHORT_LINK_DOMAIN || 'localhost:3071'}/${link.short_code}`}
+                                                            target="_blank"
+                                                            rel="noreferrer"
+                                                            className="text-lg font-bold text-blue-400 hover:text-blue-300 transition-colors tracking-tight font-mono"
+                                                        >
+                                                            {import.meta.env.VITE_SHORT_LINK_DOMAIN || 'localhost:3071'}/{link.short_code}
+                                                        </a>
+                                                        <button
+                                                            onClick={() => copyToClipboard(link.short_code)}
+                                                            className="text-gray-500 hover:text-white bg-gray-800/50 hover:bg-gray-700 p-1.5 rounded-md transition-all"
+                                                            title="Copy"
+                                                        >
+                                                            <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>
+                                                        </button>
+                                                        {!link.is_active && (
+                                                            <span className="w-fit ml-2 px-2 py-0.5 rounded-full bg-red-900/30 text-red-400 text-xs font-medium border border-red-900/50">
+                                                                Disabled
                                                             </span>
-                                                        ))}
+                                                        )}
+                                                        {link.campaign_id && campaigns.find(c => c.id === link.campaign_id) && (
+                                                            <span
+                                                                className="w-fit ml-2 px-2 py-0.5 rounded-full bg-blue-900/30 text-blue-400 text-xs font-medium border border-blue-900/50 cursor-pointer hover:bg-blue-900/50"
+                                                                onClick={() => setFilterCampaignId(link.campaign_id!)}
+                                                            >
+                                                                {campaigns.find(c => c.id === link.campaign_id)?.name}
+                                                            </span>
+                                                        )}
+                                                        {link.title && <span className="text-white font-medium ml-2">- {link.title}</span>}
                                                     </div>
-                                                )}
-                                                {link.expires_at && (
-                                                    <div className="flex items-center gap-1 mt-2 text-xs text-yellow-500/80">
-                                                        <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
-                                                        </svg>
-                                                        <span>Expires {new Date(link.expires_at.endsWith('Z') ? link.expires_at : link.expires_at + 'Z').toLocaleString()}</span>
-                                                    </div>
-                                                )}
+                                                    <p className="text-gray-400 text-sm truncate pr-4" title={link.original_url}>
+                                                        {link.original_url}
+                                                    </p>
+                                                    {link.tags && (
+                                                        <div className="flex flex-wrap gap-1 mt-1">
+                                                            {link.tags.split(',').map((tag, i) => (
+                                                                <span key={i} className="px-2 py-0.5 rounded-md bg-gray-800 text-xs text-gray-400 border border-gray-700">
+                                                                    {tag.trim()}
+                                                                </span>
+                                                            ))}
+                                                        </div>
+                                                    )}
+                                                    {link.expires_at && (
+                                                        <div className="flex items-center gap-1 mt-2 text-xs text-yellow-500/80">
+                                                            <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                                                            </svg>
+                                                            <span>Expires {new Date(link.expires_at.endsWith('Z') ? link.expires_at : link.expires_at + 'Z').toLocaleString()}</span>
+                                                        </div>
+                                                    )}
+                                                </div>
                                             </div>
 
                                             <div className="flex items-center gap-4 border-t sm:border-t-0 sm:border-l border-gray-800 pt-4 sm:pt-0 sm:pl-6 mt-2 sm:mt-0">
@@ -533,6 +841,101 @@ export default function Dashboard() {
                     </div>
                 </div>
             </main>
+
+            {/* Bulk Actions Floating Bar */}
+            {selectedLinkIds.size > 0 && (
+                <div className="fixed bottom-6 left-1/2 transform -translate-x-1/2 z-40 bg-[#1c1c1c] border border-gray-700 shadow-2xl rounded-xl px-6 py-3 flex items-center gap-6 animate-fade-in-up">
+                    <span className="text-white font-medium">{selectedLinkIds.size} Selected</span>
+                    <div className="h-6 w-px bg-gray-700"></div>
+                    <div className="flex gap-2">
+                        <button
+                            onClick={() => setShowBulkEditModal(true)}
+                            className="bg-blue-600 hover:bg-blue-500 text-white px-4 py-2 rounded-lg text-sm font-medium transition-colors"
+                        >
+                            Bulk Edit
+                        </button>
+                        <button
+                            onClick={() => setSelectedLinkIds(new Set())}
+                            className="text-gray-400 hover:text-gray-200 px-3 py-2 text-sm font-medium transition-colors"
+                        >
+                            Deselect All
+                        </button>
+                    </div>
+                </div>
+            )}
+
+            {/* Bulk Create Modal */}
+            {
+                showBulkModal && (
+                    <div className="fixed inset-0 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4 z-50">
+                        <div className="bg-[#1c1c1c] rounded-2xl shadow-2xl border border-gray-800 w-full max-w-2xl p-6 max-h-[90vh] overflow-y-auto">
+                            <h2 className="text-xl font-bold mb-4 text-white">Bulk Create Links</h2>
+                            <p className="text-gray-400 text-sm mb-4">
+                                Enter one URL per line. Each line will create a separate short link with default settings.
+                            </p>
+
+                            <textarea
+                                value={bulkUrls}
+                                onChange={(e) => setBulkUrls(e.target.value)}
+                                placeholder={`https://example.com/page1\nhttps://example.com/page2\n...`}
+                                className="w-full h-64 bg-[#2a2a2a] border border-gray-700 rounded-xl px-4 py-3 text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-500 font-mono text-sm mb-4"
+                            />
+
+                            {campaigns.length > 0 && (
+                                <div className="mb-6">
+                                    <label className="block text-sm font-medium text-gray-400 mb-1">Assign to Campaign (Optional)</label>
+                                    <select
+                                        value={createCampaignId || ''}
+                                        onChange={(e) => setCreateCampaignId(e.target.value ? Number(e.target.value) : null)}
+                                        className="w-full bg-[#2a2a2a] border border-gray-700 rounded-xl px-4 py-2 text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all text-sm"
+                                    >
+                                        <option value="">No Campaign</option>
+                                        {campaigns.map(c => (
+                                            <option key={c.id} value={c.id}>{c.name}</option>
+                                        ))}
+                                    </select>
+                                </div>
+                            )}
+
+                            <div className="flex gap-3">
+                                <button
+                                    onClick={() => setShowBulkModal(false)}
+                                    className="flex-1 px-4 py-2 bg-gray-800 hover:bg-gray-700 text-gray-300 rounded-xl transition-all"
+                                >
+                                    Cancel
+                                </button>
+                                <button
+                                    onClick={async () => {
+                                        if (!bulkUrls.trim()) return;
+                                        try {
+                                            setIsBulkCreating(true);
+                                            const urls = bulkUrls.split('\n').map(u => u.trim()).filter(u => u);
+                                            const linksToCreate = urls.map(url => ({
+                                                original_url: url,
+                                                campaign_id: createCampaignId || undefined,
+                                                redirect_type: 302
+                                            }));
+
+                                            await createLinksBulk(token!, linksToCreate);
+                                            await loadData(); // Reload all data
+                                            setBulkUrls('');
+                                            setShowBulkModal(false);
+                                        } catch (err) {
+                                            alert('Failed to create bulk links');
+                                        } finally {
+                                            setIsBulkCreating(false);
+                                        }
+                                    }}
+                                    disabled={isBulkCreating || !bulkUrls.trim()}
+                                    className="flex-1 px-4 py-2 bg-blue-600 hover:bg-blue-500 text-white font-semibold rounded-xl transition-all disabled:opacity-50"
+                                >
+                                    {isBulkCreating ? 'Creating...' : `Create ${bulkUrls.split('\n').filter(u => u.trim()).length} Links`}
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                )
+            }
 
             {/* Edit Modal */}
             {
@@ -584,6 +987,25 @@ export default function Dashboard() {
                                 <div className="border-t border-gray-700 pt-4 mt-2">
                                     <h3 className="text-sm font-semibold text-gray-300 mb-3">Settings</h3>
                                     <div className="space-y-3">
+                                        {campaigns.length > 0 && (
+                                            <div className="flex items-center justify-between p-3 bg-[#2a2a2a] rounded-xl border border-gray-700">
+                                                <div className="flex flex-col">
+                                                    <span className="text-sm font-medium text-white">Campaign</span>
+                                                    <span className="text-xs text-gray-400">Group this link</span>
+                                                </div>
+                                                <select
+                                                    value={editCampaignId || ''}
+                                                    onChange={(e) => setEditCampaignId(e.target.value ? Number(e.target.value) : null)}
+                                                    className="bg-[#1c1c1c] border border-gray-600 rounded-lg px-2 py-1 text-white text-sm focus:outline-none focus:ring-1 focus:ring-blue-500 w-40"
+                                                >
+                                                    <option value="">None</option>
+                                                    {campaigns.map(c => (
+                                                        <option key={c.id} value={c.id}>{c.name}</option>
+                                                    ))}
+                                                </select>
+                                            </div>
+                                        )}
+
                                         <div className="flex items-center justify-between p-3 bg-[#2a2a2a] rounded-xl border border-gray-700">
                                             <div className="flex flex-col">
                                                 <span className="text-sm font-medium text-white">Active Status</span>
@@ -724,6 +1146,119 @@ export default function Dashboard() {
                                     </button>
                                 </div>
                                 {editError && <p className="text-red-400 text-sm text-center">{editError}</p>}
+                            </form>
+                        </div>
+                    </div>
+                )
+            }
+
+            {/* Bulk Edit Modal */}
+            {
+                showBulkEditModal && (
+                    <div className="fixed inset-0 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4 z-50">
+                        <div className="bg-[#1c1c1c] rounded-2xl shadow-2xl border border-gray-800 w-full max-w-lg p-6 max-h-[90vh] overflow-y-auto">
+                            <h2 className="text-xl font-bold mb-2 text-white">Bulk Edit Links</h2>
+                            <p className="text-gray-400 text-sm mb-6">
+                                Editing {selectedLinkIds.size} links. Values left as "No Change" will remain untouched.
+                            </p>
+
+                            <form onSubmit={handleBulkUpdate} className="space-y-5">
+                                {/* Campaign */}
+                                <div>
+                                    <label className="block text-sm font-medium text-gray-400 mb-1.5">Campaign</label>
+                                    <select
+                                        value={bulkEditCampaignId === null ? '' : bulkEditCampaignId}
+                                        onChange={(e) => setBulkEditCampaignId(e.target.value === '' ? null : Number(e.target.value))}
+                                        className="w-full bg-[#1c1c1c] border border-gray-700 rounded-xl px-4 py-2.5 text-white focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm transition-all"
+                                    >
+                                        <option value="">No Change</option>
+                                        <option value="-1">None (Remove from Campaign)</option>
+                                        {campaigns.map(c => (
+                                            <option key={c.id} value={c.id}>{c.name}</option>
+                                        ))}
+                                    </select>
+                                </div>
+
+                                {/* Tags */}
+                                <div>
+                                    <label className="block text-sm font-medium text-gray-400 mb-1.5">Tags (Replaces existing)</label>
+                                    <input
+                                        type="text"
+                                        value={bulkEditTags}
+                                        onChange={(e) => setBulkEditTags(e.target.value)}
+                                        placeholder="No Change"
+                                        className="w-full bg-[#1c1c1c] border border-gray-700 rounded-xl px-4 py-2.5 text-white placeholder-gray-600 focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm transition-all"
+                                    />
+                                    <p className="text-xs text-gray-600 mt-1.5 ml-1">Leave empty to keep existing tags.</p>
+                                </div>
+
+                                {/* Expiration Date */}
+                                <div>
+                                    <label className="block text-sm font-medium text-gray-400 mb-1.5">Expiration Date</label>
+                                    <input
+                                        type="datetime-local"
+                                        value={bulkEditExpiresAt}
+                                        onChange={(e) => setBulkEditExpiresAt(e.target.value)}
+                                        className="w-full bg-[#1c1c1c] border border-gray-700 rounded-xl px-4 py-2.5 text-white placeholder-gray-600 focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm transition-all"
+                                    />
+                                    <p className="text-xs text-gray-600 mt-1.5 ml-1">Leave empty to keep existing expiration.</p>
+                                </div>
+
+                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
+                                    {/* Redirect Type */}
+                                    <div>
+                                        <label className="block text-sm font-medium text-gray-400 mb-2">Redirect Type</label>
+                                        <select
+                                            value={bulkEditRedirectType === null ? '' : bulkEditRedirectType}
+                                            onChange={(e) => setBulkEditRedirectType(e.target.value === '' ? null : Number(e.target.value))}
+                                            className="w-full bg-[#1c1c1c] border border-gray-700 rounded-xl px-4 py-2.5 text-white focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm transition-all"
+                                        >
+                                            <option value="">No Change</option>
+                                            <option value={301}>301 Moved Permanently</option>
+                                            <option value={302}>302 Found (Temporary)</option>
+                                            <option value={307}>307 Temporary Redirect</option>
+                                            <option value={308}>308 Permanent Redirect</option>
+                                        </select>
+                                    </div>
+
+                                    {/* Status */}
+                                    <TriStateToggle
+                                        label="Active Status"
+                                        value={bulkEditIsActive}
+                                        onChange={setBulkEditIsActive}
+                                    />
+                                </div>
+
+                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 pt-2 border-t border-gray-800">
+                                    <TriStateToggle
+                                        label="Require KeyN Login"
+                                        value={bulkEditRequireLogin}
+                                        onChange={setBulkEditRequireLogin}
+                                    />
+                                    <TriStateToggle
+                                        label="Track Activity"
+                                        value={bulkEditTrackActivity}
+                                        onChange={setBulkEditTrackActivity}
+                                    />
+                                </div>
+
+                                <div className="flex gap-3 mt-8 pt-2">
+                                    <button
+                                        type="button"
+                                        onClick={() => setShowBulkEditModal(false)}
+                                        className="flex-1 px-4 py-2.5 bg-gray-800 hover:bg-gray-700 text-gray-300 rounded-xl transition-all font-medium border border-transparent hover:border-gray-600"
+                                    >
+                                        Cancel
+                                    </button>
+                                    <button
+                                        type="submit"
+                                        disabled={isBulkSaving}
+                                        className="flex-1 px-4 py-2.5 bg-blue-600 hover:bg-blue-500 text-white font-semibold rounded-xl transition-all disabled:opacity-50 shadow-lg shadow-blue-900/20 hover:scale-[1.02] active:scale-[0.98]"
+                                    >
+                                        {isBulkSaving ? 'Updating...' : 'Update Links'}
+                                    </button>
+                                </div>
+                                {bulkEditError && <p className="text-red-400 text-sm text-center bg-red-900/10 py-2 rounded-lg border border-red-900/20">{bulkEditError}</p>}
                             </form>
                         </div>
                     </div>

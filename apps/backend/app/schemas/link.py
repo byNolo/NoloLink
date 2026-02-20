@@ -10,6 +10,7 @@ class LinkBase(BaseModel):
     title: Optional[str] = None
     tags: Optional[str] = None
     redirect_type: Optional[int] = 302
+    campaign_id: Optional[int] = None
     is_active: Optional[bool] = True
     track_activity: Optional[bool] = True
     require_login: Optional[bool] = False
@@ -51,6 +52,22 @@ class LinkUpdate(LinkBase):
              raise ValueError("Short code cannot end with '+'")
         return v
 
+class LinkBulkUpdate(BaseModel):
+    link_ids: list[int]
+    campaign_id: Optional[int] = None
+    is_active: Optional[bool] = None
+    tags: Optional[str] = None
+    require_login: Optional[bool] = None
+    password: Optional[str] = None
+    redirect_type: Optional[int] = None
+    track_activity: Optional[bool] = None
+    expires_at: Optional[datetime] = None
+    
+    # We use a special value to indicate "clear this field" if needed, 
+    # but for simplicity in this version, purely optional means "don't update if null".
+    # To clear a campaign, the frontend can send campaign_id=-1 or similar, handled in CRUD.
+    # For now, we'll assume explicit values update, None means "no change".
+
 class Link(LinkBase):
     id: int
     short_code: str
@@ -60,6 +77,7 @@ class Link(LinkBase):
     title: Optional[str] = None
     tags: Optional[str] = None
     redirect_type: Optional[int] = 302
+    campaign_id: Optional[int] = None
     # We don't return password_hash
 
     # Analytics Data (Optional, populated in stats endpoint)

@@ -18,6 +18,7 @@ class Link(Base):
     title = Column(String, nullable=True)
     tags = Column(String, nullable=True) # JSON list of tags
     redirect_type = Column(Integer, default=302)
+    campaign_id = Column(Integer, ForeignKey("campaigns.id"), nullable=True)
 
     clicks = Column(Integer, default=0)
     created_at = Column(DateTime(timezone=True), server_default=func.now())
@@ -32,4 +33,5 @@ class Link(Base):
 
     # Relationships
     owner = relationship("User", backref="links") # simplistic backref
+    campaign = relationship("Campaign", back_populates="links")
     events = relationship("ClickEvent", back_populates="link", cascade="all, delete-orphan")

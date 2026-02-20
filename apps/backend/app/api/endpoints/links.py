@@ -14,13 +14,18 @@ router = APIRouter()
 def read_links(
     skip: int = 0, 
     limit: int = 100, 
+    search: str = None,
+    campaign_id: int = None,
+    is_active: bool = None,
     db: Session = Depends(get_db), 
     current_user: User = Depends(deps.get_current_active_user)
 ):
-    # If superuser, maybe show all? Or just own?
-    # For now, let's keep it to own links, or strict "My Links" behavior.
-    # If we want admin view, we'd add a separate endpoint or query param.
-    return crud_link.get_links_by_owner(db, owner_id=current_user.id, skip=skip, limit=limit)
+    filters = {
+        "search": search,
+        "campaign_id": campaign_id,
+        "is_active": is_active
+    }
+    return crud_link.get_links(db, owner_id=current_user.id, skip=skip, limit=limit, filters=filters)
 
 @router.post("/", response_model=link_schema.Link)
 def create_link(
@@ -35,6 +40,28 @@ def create_link(
     if not db_link:
         raise HTTPException(status_code=400, detail="Short code already exists")
     return db_link
+
+@router.post("/bulk", response_model=List[link_schema.Link])
+def create_links_bulk(
+    links: List[link_schema.LinkCreate],
+    db: Session = Depends(get_db),
+    current_user: User = Depends(deps.get_current_active_user)
+):
+    if not current_user.is_approved and not current_user.is_superuser:
+        raise HTTPException(status_code=403, detail="User not approved to create links")
+    
+    return crud_link.create_links_bulk(db=db, links=links, owner_id=current_user.id)
+
+@router.put("/bulk", response_model=List[link_schema.Link])
+def update_links_bulk(
+    bulk_update: link_schema.LinkBulkUpdate,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(deps.get_current_active_user)
+):
+    if not current_user.is_approved and not current_user.is_superuser:
+        raise HTTPException(status_code=403, detail="User not approved to update links")
+    
+    return crud_link.update_links_bulk(db=db, bulk_update=bulk_update, owner_id=current_user.id)
 
 @router.put("/{link_id}", response_model=link_schema.Link)
 def update_link(
