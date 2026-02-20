@@ -60,6 +60,12 @@ export default function Dashboard() {
     const [createCampaignId, setCreateCampaignId] = useState<number | null>(null);
     const [isCreating, setIsCreating] = useState(false);
     const [createError, setCreateError] = useState<string | null>(null);
+    const [createUtmSource, setCreateUtmSource] = useState('');
+    const [createUtmMedium, setCreateUtmMedium] = useState('');
+    const [createUtmCampaign, setCreateUtmCampaign] = useState('');
+    const [createUtmTerm, setCreateUtmTerm] = useState('');
+    const [createUtmContent, setCreateUtmContent] = useState('');
+    const [showCreateUtm, setShowCreateUtm] = useState(false);
 
     // Bulk Create State
     const [showBulkModal, setShowBulkModal] = useState(false);
@@ -80,6 +86,12 @@ export default function Dashboard() {
     const [bulkEditRedirectType, setBulkEditRedirectType] = useState<number | null>(null);
     const [bulkEditExpiresAt, setBulkEditExpiresAt] = useState('');
     const [bulkEditError, setBulkEditError] = useState<string | null>(null);
+    const [bulkEditUtmSource, setBulkEditUtmSource] = useState('');
+    const [bulkEditUtmMedium, setBulkEditUtmMedium] = useState('');
+    const [bulkEditUtmCampaign, setBulkEditUtmCampaign] = useState('');
+    const [bulkEditUtmTerm, setBulkEditUtmTerm] = useState('');
+    const [bulkEditUtmContent, setBulkEditUtmContent] = useState('');
+    const [showBulkEditUtm, setShowBulkEditUtm] = useState(false);
 
     // Edit State
     const [editingLink, setEditingLink] = useState<Link | null>(null);
@@ -98,6 +110,12 @@ export default function Dashboard() {
     const [shouldClearPassword, setShouldClearPassword] = useState(false);
     const [isSaving, setIsSaving] = useState(false);
     const [editError, setEditError] = useState<string | null>(null);
+    const [editUtmSource, setEditUtmSource] = useState('');
+    const [editUtmMedium, setEditUtmMedium] = useState('');
+    const [editUtmCampaign, setEditUtmCampaign] = useState('');
+    const [editUtmTerm, setEditUtmTerm] = useState('');
+    const [editUtmContent, setEditUtmContent] = useState('');
+    const [showEditUtm, setShowEditUtm] = useState(false);
 
     // Campaign Manager State
     const [newCampaignName, setNewCampaignName] = useState('');
@@ -207,7 +225,12 @@ export default function Dashboard() {
                 title: createTitle || undefined,
                 tags: createTags || undefined,
                 redirect_type: createRedirectType,
-                campaign_id: createCampaignId || undefined
+                campaign_id: createCampaignId || undefined,
+                utm_source: createUtmSource || undefined,
+                utm_medium: createUtmMedium || undefined,
+                utm_campaign: createUtmCampaign || undefined,
+                utm_term: createUtmTerm || undefined,
+                utm_content: createUtmContent || undefined
             });
             setLinks([created, ...links]);
             setNewUrl('');
@@ -221,6 +244,12 @@ export default function Dashboard() {
             setCreateAllowedEmails('');
             setCreateExpiresAt('');
             setCreateTrackActivity(true);
+            setCreateUtmSource('');
+            setCreateUtmMedium('');
+            setCreateUtmCampaign('');
+            setCreateUtmTerm('');
+            setCreateUtmContent('');
+            setShowCreateUtm(false);
         } catch (err: any) {
             setCreateError(err.message || 'Failed to create link');
         } finally {
@@ -295,7 +324,12 @@ export default function Dashboard() {
                 title: editTitle || undefined,
                 tags: editTags || undefined,
                 redirect_type: editRedirectType,
-                campaign_id: editCampaignId || undefined
+                campaign_id: editCampaignId || undefined,
+                utm_source: editUtmSource || undefined,
+                utm_medium: editUtmMedium || undefined,
+                utm_campaign: editUtmCampaign || undefined,
+                utm_term: editUtmTerm || undefined,
+                utm_content: editUtmContent || undefined
             });
 
             setLinks(links.map(l => l.id === updated.id ? updated : l));
@@ -348,7 +382,12 @@ export default function Dashboard() {
                 require_login: bulkEditRequireLogin === null ? undefined : bulkEditRequireLogin,
                 track_activity: bulkEditTrackActivity === null ? undefined : bulkEditTrackActivity,
                 redirect_type: bulkEditRedirectType === null ? undefined : bulkEditRedirectType,
-                expires_at: expiresAtISO
+                expires_at: expiresAtISO,
+                utm_source: bulkEditUtmSource || undefined,
+                utm_medium: bulkEditUtmMedium || undefined,
+                utm_campaign: bulkEditUtmCampaign || undefined,
+                utm_term: bulkEditUtmTerm || undefined,
+                utm_content: bulkEditUtmContent || undefined
             });
 
             // Reload data to reflect changes
@@ -365,6 +404,12 @@ export default function Dashboard() {
             setBulkEditTrackActivity(null);
             setBulkEditRedirectType(null);
             setBulkEditExpiresAt('');
+            setBulkEditUtmSource('');
+            setBulkEditUtmMedium('');
+            setBulkEditUtmCampaign('');
+            setBulkEditUtmTerm('');
+            setBulkEditUtmContent('');
+            setShowBulkEditUtm(false);
 
         } catch (err: any) {
             setBulkEditError(err.message || 'Failed to update links');
@@ -386,6 +431,12 @@ export default function Dashboard() {
         setEditAllowedEmails(link.allowed_emails || '');
         setEditIsActive(link.is_active);
         setEditTrackActivity(link.track_activity);
+        setEditUtmSource(link.utm_source || '');
+        setEditUtmMedium(link.utm_medium || '');
+        setEditUtmCampaign(link.utm_campaign || '');
+        setEditUtmTerm(link.utm_term || '');
+        setEditUtmContent(link.utm_content || '');
+        setShowEditUtm(false);
 
         // Convert UTC ISO string from backend to "YYYY-MM-DDTHH:mm" local time for input
         let localInputValue = '';
@@ -731,6 +782,74 @@ export default function Dashboard() {
                                         </div>
                                     </div>
                                 </div>
+
+                                <div className="border-t border-gray-800 pt-4 mt-2">
+                                    <div
+                                        className="flex items-center justify-between cursor-pointer group mb-3"
+                                        onClick={() => setShowCreateUtm(!showCreateUtm)}
+                                    >
+                                        <h3 className="text-sm font-semibold text-gray-300">UTM Parameters</h3>
+                                        <svg className={`w-4 h-4 text-gray-500 group-hover:text-blue-400 transition-transform ${showCreateUtm ? 'rotate-180' : ''}`} fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                                        </svg>
+                                    </div>
+
+                                    {showCreateUtm && (
+                                        <div className="space-y-3">
+                                            <div>
+                                                <label className="block text-sm font-medium text-gray-400 mb-1">Source</label>
+                                                <input
+                                                    type="text"
+                                                    value={createUtmSource}
+                                                    onChange={(e) => setCreateUtmSource(e.target.value)}
+                                                    placeholder="google, newsletter"
+                                                    className="w-full bg-[#2a2a2a] border border-gray-700 rounded-xl px-4 py-2 text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm transition-all"
+                                                />
+                                            </div>
+                                            <div>
+                                                <label className="block text-sm font-medium text-gray-400 mb-1">Medium</label>
+                                                <input
+                                                    type="text"
+                                                    value={createUtmMedium}
+                                                    onChange={(e) => setCreateUtmMedium(e.target.value)}
+                                                    placeholder="cpc, email"
+                                                    className="w-full bg-[#2a2a2a] border border-gray-700 rounded-xl px-4 py-2 text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm transition-all"
+                                                />
+                                            </div>
+                                            <div>
+                                                <label className="block text-sm font-medium text-gray-400 mb-1">Campaign</label>
+                                                <input
+                                                    type="text"
+                                                    value={createUtmCampaign}
+                                                    onChange={(e) => setCreateUtmCampaign(e.target.value)}
+                                                    placeholder="summer_sale"
+                                                    className="w-full bg-[#2a2a2a] border border-gray-700 rounded-xl px-4 py-2 text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm transition-all"
+                                                />
+                                            </div>
+                                            <div>
+                                                <label className="block text-sm font-medium text-gray-400 mb-1">Term</label>
+                                                <input
+                                                    type="text"
+                                                    value={createUtmTerm}
+                                                    onChange={(e) => setCreateUtmTerm(e.target.value)}
+                                                    placeholder="running+shoes"
+                                                    className="w-full bg-[#2a2a2a] border border-gray-700 rounded-xl px-4 py-2 text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm transition-all"
+                                                />
+                                            </div>
+                                            <div>
+                                                <label className="block text-sm font-medium text-gray-400 mb-1">Content</label>
+                                                <input
+                                                    type="text"
+                                                    value={createUtmContent}
+                                                    onChange={(e) => setCreateUtmContent(e.target.value)}
+                                                    placeholder="logotype_ad"
+                                                    className="w-full bg-[#2a2a2a] border border-gray-700 rounded-xl px-4 py-2 text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm transition-all"
+                                                />
+                                            </div>
+                                        </div>
+                                    )}
+                                </div>
+
                                 <button
                                     type="submit"
                                     disabled={isCreating}
@@ -918,7 +1037,7 @@ export default function Dashboard() {
                                                             </svg>
                                                         </div>
                                                         {expandedLogId === log.id && details.summary && (
-                                                            <div className="px-4 pb-3 pl-[4.5rem]">
+                                                            <div className="px-4 pb-3 pl-18">
                                                                 <p className="text-xs text-gray-400 leading-relaxed">{details.summary}</p>
                                                             </div>
                                                         )}
@@ -1334,6 +1453,73 @@ export default function Dashboard() {
                                     </div>
                                 </div>
 
+                                <div className="border-t border-gray-700 pt-4 mt-2">
+                                    <div
+                                        className="flex items-center justify-between cursor-pointer group mb-3"
+                                        onClick={() => setShowEditUtm(!showEditUtm)}
+                                    >
+                                        <h3 className="text-sm font-semibold text-gray-300">UTM Parameters</h3>
+                                        <svg className={`w-4 h-4 text-gray-500 group-hover:text-blue-400 transition-transform ${showEditUtm ? 'rotate-180' : ''}`} fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                                        </svg>
+                                    </div>
+
+                                    {showEditUtm && (
+                                        <div className="space-y-3">
+                                            <div>
+                                                <label className="block text-sm font-medium text-gray-400 mb-1">Source</label>
+                                                <input
+                                                    type="text"
+                                                    value={editUtmSource}
+                                                    onChange={(e) => setEditUtmSource(e.target.value)}
+                                                    placeholder="google, newsletter"
+                                                    className="w-full bg-[#2a2a2a] border border-gray-700 rounded-xl px-4 py-2 text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm transition-all"
+                                                />
+                                            </div>
+                                            <div>
+                                                <label className="block text-sm font-medium text-gray-400 mb-1">Medium</label>
+                                                <input
+                                                    type="text"
+                                                    value={editUtmMedium}
+                                                    onChange={(e) => setEditUtmMedium(e.target.value)}
+                                                    placeholder="cpc, email"
+                                                    className="w-full bg-[#2a2a2a] border border-gray-700 rounded-xl px-4 py-2 text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm transition-all"
+                                                />
+                                            </div>
+                                            <div>
+                                                <label className="block text-sm font-medium text-gray-400 mb-1">Campaign</label>
+                                                <input
+                                                    type="text"
+                                                    value={editUtmCampaign}
+                                                    onChange={(e) => setEditUtmCampaign(e.target.value)}
+                                                    placeholder="summer_sale"
+                                                    className="w-full bg-[#2a2a2a] border border-gray-700 rounded-xl px-4 py-2 text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm transition-all"
+                                                />
+                                            </div>
+                                            <div>
+                                                <label className="block text-sm font-medium text-gray-400 mb-1">Term</label>
+                                                <input
+                                                    type="text"
+                                                    value={editUtmTerm}
+                                                    onChange={(e) => setEditUtmTerm(e.target.value)}
+                                                    placeholder="running+shoes"
+                                                    className="w-full bg-[#2a2a2a] border border-gray-700 rounded-xl px-4 py-2 text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm transition-all"
+                                                />
+                                            </div>
+                                            <div>
+                                                <label className="block text-sm font-medium text-gray-400 mb-1">Content</label>
+                                                <input
+                                                    type="text"
+                                                    value={editUtmContent}
+                                                    onChange={(e) => setEditUtmContent(e.target.value)}
+                                                    placeholder="logotype_ad"
+                                                    className="w-full bg-[#2a2a2a] border border-gray-700 rounded-xl px-4 py-2 text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm transition-all"
+                                                />
+                                            </div>
+                                        </div>
+                                    )}
+                                </div>
+
                                 <div className="flex gap-3 mt-6">
                                     <button
                                         type="button"
@@ -1445,6 +1631,73 @@ export default function Dashboard() {
                                         value={bulkEditTrackActivity}
                                         onChange={setBulkEditTrackActivity}
                                     />
+                                </div>
+
+                                <div className="border-t border-gray-800 pt-4 mt-2">
+                                    <div
+                                        className="flex items-center justify-between cursor-pointer group mb-3"
+                                        onClick={() => setShowBulkEditUtm(!showBulkEditUtm)}
+                                    >
+                                        <h3 className="text-sm font-semibold text-gray-300">UTM Parameters</h3>
+                                        <svg className={`w-4 h-4 text-gray-500 group-hover:text-blue-400 transition-transform ${showBulkEditUtm ? 'rotate-180' : ''}`} fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                                        </svg>
+                                    </div>
+
+                                    {showBulkEditUtm && (
+                                        <div className="space-y-3">
+                                            <div>
+                                                <label className="block text-sm font-medium text-gray-400 mb-1">Source</label>
+                                                <input
+                                                    type="text"
+                                                    value={bulkEditUtmSource}
+                                                    onChange={(e) => setBulkEditUtmSource(e.target.value)}
+                                                    placeholder="No Change"
+                                                    className="w-full bg-[#1c1c1c] border border-gray-700 rounded-xl px-4 py-2 text-white placeholder-gray-600 focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm transition-all"
+                                                />
+                                            </div>
+                                            <div>
+                                                <label className="block text-sm font-medium text-gray-400 mb-1">Medium</label>
+                                                <input
+                                                    type="text"
+                                                    value={bulkEditUtmMedium}
+                                                    onChange={(e) => setBulkEditUtmMedium(e.target.value)}
+                                                    placeholder="No Change"
+                                                    className="w-full bg-[#1c1c1c] border border-gray-700 rounded-xl px-4 py-2 text-white placeholder-gray-600 focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm transition-all"
+                                                />
+                                            </div>
+                                            <div>
+                                                <label className="block text-sm font-medium text-gray-400 mb-1">Campaign</label>
+                                                <input
+                                                    type="text"
+                                                    value={bulkEditUtmCampaign}
+                                                    onChange={(e) => setBulkEditUtmCampaign(e.target.value)}
+                                                    placeholder="No Change"
+                                                    className="w-full bg-[#1c1c1c] border border-gray-700 rounded-xl px-4 py-2 text-white placeholder-gray-600 focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm transition-all"
+                                                />
+                                            </div>
+                                            <div>
+                                                <label className="block text-sm font-medium text-gray-400 mb-1">Term</label>
+                                                <input
+                                                    type="text"
+                                                    value={bulkEditUtmTerm}
+                                                    onChange={(e) => setBulkEditUtmTerm(e.target.value)}
+                                                    placeholder="No Change"
+                                                    className="w-full bg-[#1c1c1c] border border-gray-700 rounded-xl px-4 py-2 text-white placeholder-gray-600 focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm transition-all"
+                                                />
+                                            </div>
+                                            <div>
+                                                <label className="block text-sm font-medium text-gray-400 mb-1">Content</label>
+                                                <input
+                                                    type="text"
+                                                    value={bulkEditUtmContent}
+                                                    onChange={(e) => setBulkEditUtmContent(e.target.value)}
+                                                    placeholder="No Change"
+                                                    className="w-full bg-[#1c1c1c] border border-gray-700 rounded-xl px-4 py-2 text-white placeholder-gray-600 focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm transition-all"
+                                                />
+                                            </div>
+                                        </div>
+                                    )}
                                 </div>
 
                                 <div className="flex gap-3 mt-8 pt-2">

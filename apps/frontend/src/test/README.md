@@ -8,7 +8,7 @@ The frontend test suite uses **Vitest** (Vite's native test runner) with **React
 |--------|-------|----------|
 | `App.test.tsx` | 1 | Smoke test — app renders without crashing |
 | `AuthContext.test.tsx` | 6 | Auth state, login/logout, token persistence, error handling |
-| `api.test.ts` | 14 | All API functions — URLs, headers, methods, error handling |
+| `api.test.ts` | 15 | All API functions — URLs, headers, methods, error handling |
 | `pages.test.tsx` | 10 | NotFound, ErrorPage (4 variants), Unauthorized, ServerError, ToS, Privacy |
 | `Navbar.test.tsx` | 6 | Logo, username, superuser badge, admin panel, dashboard link |
 | `VerifyLinkPage.test.tsx` | 8 | Password form, login button, dual protection, error display |

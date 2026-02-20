@@ -57,6 +57,7 @@ Modern URL shortening with security at its core:
     *   **Traffic Sources**: Top referrers (including direct traffic).
     *   **Geographic Data**: Top countries by visitor IP.
     *   **Device Breakdown**: Stats by device type (Mobile, Desktop, Tablet).
+    *   **UTM Builder**: Append tracking parameters (`utm_source`, `utm_medium`, etc.) to URLs before shortening.
     *   *Privacy Control*: Per-link toggle to enable/disable detailed tracking.
 *   **QR Code Integration** - Auto-generated QR codes for instant mobile sharing.
 *   **Smart Stats Access** - Append `+` to any short link to view its stats (e.g., `s.bynolo.ca/code+`).
@@ -156,16 +157,16 @@ NoloLink has a comprehensive test suite covering both backend and frontend.
 
 ```bash
 make test            # Run all tests (backend + frontend)
-make test-backend    # Backend only — 76 tests (pytest)
-make test-frontend   # Frontend only — 48 tests (Vitest)
+make test-backend    # Backend only — 82 tests (pytest)
+make test-frontend   # Frontend only — 49 tests (Vitest)
 ```
 
 ### Test Coverage
 
 | Suite | Framework | Tests | Areas Covered |
 |-------|-----------|-------|---------------|
-| **Backend** | pytest + TestClient | 76 | Links, Campaigns, Redirect, Verify, Users, Export/Import, Audit |
-| **Frontend** | Vitest + React Testing Library | 48 | Routing, Auth, API layer, Pages, Components |
+| **Backend** | pytest + TestClient | 82 | Links, Campaigns, Redirect, Verify, Users, Export/Import, Audit, UTM |
+| **Frontend** | Vitest + React Testing Library | 49 | Routing, Auth, API layer, Pages, Components, UTM UI |
 
 ### Writing New Tests
 

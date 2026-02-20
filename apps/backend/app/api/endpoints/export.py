@@ -19,7 +19,8 @@ router = APIRouter()
 CSV_COLUMNS = [
     "short_code", "original_url", "title", "tags", "is_active",
     "redirect_type", "campaign_name", "require_login", "allowed_emails",
-    "expires_at", "clicks", "created_at"
+    "expires_at", "clicks", "created_at",
+    "utm_source", "utm_medium", "utm_campaign", "utm_term", "utm_content"
 ]
 
 
@@ -56,6 +57,11 @@ def export_links_csv(
             "expires_at": link.expires_at.isoformat() if link.expires_at else "",
             "clicks": link.clicks,
             "created_at": link.created_at.isoformat() if link.created_at else "",
+            "utm_source": link.utm_source or "",
+            "utm_medium": link.utm_medium or "",
+            "utm_campaign": link.utm_campaign or "",
+            "utm_term": link.utm_term or "",
+            "utm_content": link.utm_content or "",
         })
 
     output.seek(0)
@@ -138,6 +144,13 @@ def import_links_csv(
         if campaign_name:
             campaign_id = campaign_name_map.get(campaign_name.lower())
 
+        # Parse UTM fields
+        utm_source = row.get("utm_source", "").strip() or None
+        utm_medium = row.get("utm_medium", "").strip() or None
+        utm_campaign = row.get("utm_campaign", "").strip() or None
+        utm_term = row.get("utm_term", "").strip() or None
+        utm_content = row.get("utm_content", "").strip() or None
+
         from app.schemas.link import LinkCreate
         link_data = LinkCreate(
             original_url=original_url,
@@ -150,6 +163,11 @@ def import_links_csv(
             require_login=require_login,
             allowed_emails=allowed_emails,
             expires_at=expires_at,
+            utm_source=utm_source,
+            utm_medium=utm_medium,
+            utm_campaign=utm_campaign,
+            utm_term=utm_term,
+            utm_content=utm_content,
         )
 
         db_link = crud_link.create_link(db=db, link=link_data, owner_id=current_user.id)

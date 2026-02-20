@@ -3,6 +3,7 @@ from fastapi.responses import RedirectResponse
 from sqlalchemy.orm import Session
 from app.db.session import get_db
 from app.crud import link as crud_link
+from app.crud.link import build_redirect_url
 from datetime import datetime
 
 router = APIRouter()
@@ -62,4 +63,6 @@ def redirect_to_url(short_code: str, request: Request, db: Session = Depends(get
     except Exception as e:
         print(f"Error capturing click analytics: {e}")
     
-    return RedirectResponse(link.original_url, status_code=link.redirect_type or 302)
+    # Build final redirect URL with UTM parameters appended
+    redirect_url = build_redirect_url(link)
+    return RedirectResponse(redirect_url, status_code=link.redirect_type or 302)

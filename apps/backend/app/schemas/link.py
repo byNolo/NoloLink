@@ -17,6 +17,12 @@ class LinkBase(BaseModel):
     allowed_emails: Optional[str] = None # JSON string
     expires_at: Optional[datetime] = None
     is_deleted: Optional[bool] = False
+    # UTM Parameters
+    utm_source: Optional[str] = None
+    utm_medium: Optional[str] = None
+    utm_campaign: Optional[str] = None
+    utm_term: Optional[str] = None
+    utm_content: Optional[str] = None
 
 class LinkCreate(LinkBase):
     password: Optional[str] = None
@@ -62,6 +68,12 @@ class LinkBulkUpdate(BaseModel):
     redirect_type: Optional[int] = None
     track_activity: Optional[bool] = None
     expires_at: Optional[datetime] = None
+    # UTM Parameters
+    utm_source: Optional[str] = None
+    utm_medium: Optional[str] = None
+    utm_campaign: Optional[str] = None
+    utm_term: Optional[str] = None
+    utm_content: Optional[str] = None
     
     # We use a special value to indicate "clear this field" if needed, 
     # but for simplicity in this version, purely optional means "don't update if null".

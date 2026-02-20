@@ -29,6 +29,13 @@ class Link(Base):
     allowed_emails = Column(String, nullable=True)  # JSON list of emails
     expires_at = Column(DateTime(timezone=True), nullable=True)
 
+    # UTM Parameters
+    utm_source = Column(String, nullable=True)
+    utm_medium = Column(String, nullable=True)
+    utm_campaign = Column(String, nullable=True)
+    utm_term = Column(String, nullable=True)
+    utm_content = Column(String, nullable=True)
+
 
 
     # Relationships

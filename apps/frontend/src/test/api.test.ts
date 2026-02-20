@@ -131,6 +131,25 @@ describe('API Layer', () => {
             expect(body.short_code).toBe('new1');
             expect(body.title).toBe('My Link');
         });
+
+        it('sends UTM parameters in request body', async () => {
+            mockFetch.mockResolvedValue({
+                ok: true,
+                json: async () => ({ id: 1, short_code: 'utm1', original_url: 'https://test.com' }),
+            });
+
+            await createLink(TOKEN, 'https://test.com', 'utm1', {
+                utm_source: 'google',
+                utm_medium: 'cpc',
+                utm_campaign: 'spring_sale'
+            });
+
+            const [, opts] = mockFetch.mock.calls[0];
+            const body = JSON.parse(opts.body);
+            expect(body.utm_source).toBe('google');
+            expect(body.utm_medium).toBe('cpc');
+            expect(body.utm_campaign).toBe('spring_sale');
+        });
     });
 
     describe('updateLink', () => {

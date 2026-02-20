@@ -234,6 +234,11 @@ def create_test_link(
     tags: str = None,
     title: str = None,
     track_activity: bool = True,
+    utm_source: str = None,
+    utm_medium: str = None,
+    utm_campaign: str = None,
+    utm_term: str = None,
+    utm_content: str = None,
 ) -> Link:
     """Directly insert a Link into the test DB."""
     link = Link(
@@ -249,6 +254,11 @@ def create_test_link(
         tags=tags,
         title=title,
         track_activity=track_activity,
+        utm_source=utm_source,
+        utm_medium=utm_medium,
+        utm_campaign=utm_campaign,
+        utm_term=utm_term,
+        utm_content=utm_content,
     )
     db.add(link)
     db.commit()

@@ -1,3 +1,5 @@
+from urllib.parse import urlencode, urlparse, parse_qs, urlunparse
+
 from sqlalchemy.orm import Session
 from app.models.link import Link
 from app.schemas.link import LinkCreate, LinkUpdate
@@ -5,6 +7,31 @@ import shortuuid
 from passlib.context import CryptContext
 
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
+
+
+def build_redirect_url(link: Link) -> str:
+    """Append any non-empty UTM parameters to the link's original_url."""
+    utm_params = {}
+    if link.utm_source:
+        utm_params["utm_source"] = link.utm_source
+    if link.utm_medium:
+        utm_params["utm_medium"] = link.utm_medium
+    if link.utm_campaign:
+        utm_params["utm_campaign"] = link.utm_campaign
+    if link.utm_term:
+        utm_params["utm_term"] = link.utm_term
+    if link.utm_content:
+        utm_params["utm_content"] = link.utm_content
+
+    if not utm_params:
+        return link.original_url
+
+    parsed = urlparse(link.original_url)
+    existing_params = parse_qs(parsed.query, keep_blank_values=True)
+    # UTM params override any existing ones with the same key
+    existing_params.update({k: [v] for k, v in utm_params.items()})
+    new_query = urlencode({k: v[0] for k, v in existing_params.items()})
+    return urlunparse(parsed._replace(query=new_query))
 
 def get_link(db: Session, link_id: int):
     return db.query(Link).filter(Link.id == link_id, Link.is_deleted == False).first()
@@ -68,7 +95,12 @@ def create_link(db: Session, link: LinkCreate, owner_id: int):
         password_hash=password_hash,
         expires_at=link.expires_at,
         track_activity=link.track_activity,
-        campaign_id=link.campaign_id
+        campaign_id=link.campaign_id,
+        utm_source=link.utm_source,
+        utm_medium=link.utm_medium,
+        utm_campaign=link.utm_campaign,
+        utm_term=link.utm_term,
+        utm_content=link.utm_content,
     )
     db.add(db_link)
     db.commit()
@@ -96,6 +128,13 @@ def update_link(db: Session, db_link: Link, link_update: LinkUpdate):
     db_link.require_login = link_update.require_login
     db_link.allowed_emails = link_update.allowed_emails
     db_link.expires_at = link_update.expires_at
+
+    # UTM Parameters
+    db_link.utm_source = link_update.utm_source
+    db_link.utm_medium = link_update.utm_medium
+    db_link.utm_campaign = link_update.utm_campaign
+    db_link.utm_term = link_update.utm_term
+    db_link.utm_content = link_update.utm_content
     
     if link_update.password is not None:
         if link_update.password == "":
@@ -148,7 +187,12 @@ def create_links_bulk(db: Session, links: list[LinkCreate], owner_id: int):
             password_hash=password_hash,
             expires_at=link_data.expires_at,
             track_activity=link_data.track_activity,
-            campaign_id=link_data.campaign_id
+            campaign_id=link_data.campaign_id,
+            utm_source=link_data.utm_source,
+            utm_medium=link_data.utm_medium,
+            utm_campaign=link_data.utm_campaign,
+            utm_term=link_data.utm_term,
+            utm_content=link_data.utm_content,
         )
         db.add(db_link)
         created_links.append(db_link)
@@ -201,6 +245,18 @@ def update_links_bulk(db: Session, bulk_update: LinkBulkUpdate, owner_id: int):
 
         if bulk_update.expires_at is not None:
             link.expires_at = bulk_update.expires_at
+
+        # UTM Parameters
+        if bulk_update.utm_source is not None:
+            link.utm_source = bulk_update.utm_source or None
+        if bulk_update.utm_medium is not None:
+            link.utm_medium = bulk_update.utm_medium or None
+        if bulk_update.utm_campaign is not None:
+            link.utm_campaign = bulk_update.utm_campaign or None
+        if bulk_update.utm_term is not None:
+            link.utm_term = bulk_update.utm_term or None
+        if bulk_update.utm_content is not None:
+            link.utm_content = bulk_update.utm_content or None
         
         updated_count += 1
         db.add(link)
