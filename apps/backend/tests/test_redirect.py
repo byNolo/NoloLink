@@ -5,6 +5,7 @@ from datetime import datetime, timedelta
 from passlib.context import CryptContext
 from app.models.link import Link
 from app.models.analytics import ClickEvent
+from unittest.mock import patch
 from tests.conftest import create_test_link
 
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
@@ -67,12 +68,21 @@ class TestRedirectStats:
         assert resp.status_code == 302
         assert "/stats/info" in resp.headers["location"]
 
-    def test_redirect_click_tracking(self, client, db, test_user):
+    @patch("app.utils.analytics.get_country_code")
+    def test_redirect_click_tracking(self, mock_geo, client, db, test_user):
+        mock_geo.return_value = "CA"
         link = create_test_link(db, owner_id=test_user.id, short_code="cnt",
                                 original_url="https://count.example.com")
+        
         # Count existing click events
         initial_events = db.query(ClickEvent).filter(ClickEvent.link_id == link.id).count()
-        client.get("/cnt", follow_redirects=False)
-        # A ClickEvent should have been created
-        new_events = db.query(ClickEvent).filter(ClickEvent.link_id == link.id).count()
-        assert new_events == initial_events + 1
+        
+        client.get("/cnt", headers={"referer": "https://www.google.com/search?q=test"}, follow_redirects=False)
+        
+        # A ClickEvent should have been created with normalized data
+        event = db.query(ClickEvent).filter(ClickEvent.link_id == link.id).order_by(ClickEvent.id.desc()).first()
+        assert event is not None
+        assert event.referrer == "google.com"
+        assert event.country_code == "CA"
+        assert event.device_type == "desktop"  # Default for TestClient UA
+

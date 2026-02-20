@@ -157,7 +157,7 @@ NoloLink has a comprehensive test suite covering both backend and frontend.
 
 ```bash
 make test            # Run all tests (backend + frontend)
-make test-backend    # Backend only — 82 tests (pytest)
+make test-backend    # Backend only — 87 tests (pytest)
 make test-frontend   # Frontend only — 49 tests (Vitest)
 ```
 
@@ -165,7 +165,7 @@ make test-frontend   # Frontend only — 49 tests (Vitest)
 
 | Suite | Framework | Tests | Areas Covered |
 |-------|-----------|-------|---------------|
-| **Backend** | pytest + TestClient | 82 | Links, Campaigns, Redirect, Verify, Users, Export/Import, Audit, UTM |
+| **Backend** | pytest + TestClient | 87 | Links, Campaigns, Redirect, Verify, Users, Export/Import, Audit, UTM |
 | **Frontend** | Vitest + React Testing Library | 49 | Routing, Auth, API layer, Pages, Components, UTM UI |
 
 ### Writing New Tests
