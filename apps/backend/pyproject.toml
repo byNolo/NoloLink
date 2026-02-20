@@ -18,7 +18,8 @@ dependencies = [
     "shortuuid (>=1.0.13,<2.0.0)",
     "passlib[bcrypt] (>=1.7.4,<2.0.0)",
     "bcrypt (==3.2.2)",
-    "user-agents (>=2.2.0,<3.0.0)"
+    "user-agents (>=2.2.0,<3.0.0)",
+    "python-multipart (>=0.0.22,<0.0.23)"
 ]
 
 [tool.poetry]

@@ -4,6 +4,7 @@ from typing import List
 
 from app.db.session import get_db
 from app.crud import link as crud_link
+from app.crud import audit as crud_audit
 from app.schemas import link as link_schema
 from app.api import deps
 from app.models.user import User
@@ -39,6 +40,15 @@ def create_link(
     db_link = crud_link.create_link(db=db, link=link, owner_id=current_user.id)
     if not db_link:
         raise HTTPException(status_code=400, detail="Short code already exists")
+    
+    crud_audit.create_audit_entry(
+        db, user_id=current_user.id, action="create",
+        target_type="link", target_id=db_link.id,
+        details={
+            "short_code": db_link.short_code,
+            "summary": f"Created link /{db_link.short_code} → {db_link.original_url[:80]}"
+        }
+    )
     return db_link
 
 @router.post("/bulk", response_model=List[link_schema.Link])
@@ -61,7 +71,27 @@ def update_links_bulk(
     if not current_user.is_approved and not current_user.is_superuser:
         raise HTTPException(status_code=403, detail="User not approved to update links")
     
-    return crud_link.update_links_bulk(db=db, bulk_update=bulk_update, owner_id=current_user.id)
+    updated = crud_link.update_links_bulk(db=db, bulk_update=bulk_update, owner_id=current_user.id)
+    
+    # Build summary of what fields were changed
+    changed_fields = []
+    update_data = bulk_update.dict(exclude={'link_ids'}, exclude_unset=True) if hasattr(bulk_update, 'dict') else {}
+    for k, v in update_data.items():
+        if v is not None:
+            changed_fields.append(k.replace('_', ' '))
+    fields_str = ', '.join(changed_fields) if changed_fields else 'bulk fields'
+    
+    for link in updated:
+        crud_audit.create_audit_entry(
+            db, user_id=current_user.id, action="update",
+            target_type="link", target_id=link.id,
+            details={
+                "short_code": link.short_code,
+                "bulk_update": True,
+                "summary": f"Bulk edit /{link.short_code}: updated {fields_str}"
+            }
+        )
+    return updated
 
 @router.put("/{link_id}", response_model=link_schema.Link)
 def update_link(
@@ -82,6 +112,34 @@ def update_link(
     updated_link = crud_link.update_link(db=db, db_link=link, link_update=link_in)
     if not updated_link:
         raise HTTPException(status_code=400, detail="Short code already exists")
+    
+    # Build change summary by comparing old vs new
+    changes = []
+    if link.original_url != updated_link.original_url:
+        changes.append(f"url → {updated_link.original_url[:60]}")
+    if link.short_code != updated_link.short_code:
+        changes.append(f"slug → /{updated_link.short_code}")
+    if link.is_active != updated_link.is_active:
+        changes.append(f"{'activated' if updated_link.is_active else 'deactivated'}")
+    if link.campaign_id != updated_link.campaign_id:
+        changes.append("campaign changed")
+    if link.title != updated_link.title:
+        changes.append(f"title → {updated_link.title or '(cleared)'}")
+    if link.tags != updated_link.tags:
+        changes.append("tags updated")
+    if link.expires_at != updated_link.expires_at:
+        changes.append("expiration changed")
+    if link.require_login != updated_link.require_login:
+        changes.append(f"require login → {'yes' if updated_link.require_login else 'no'}")
+    if link.redirect_type != updated_link.redirect_type:
+        changes.append(f"redirect → {updated_link.redirect_type}")
+    summary = f"Updated /{updated_link.short_code}: {', '.join(changes)}" if changes else f"Updated /{updated_link.short_code} (no visible changes)"
+    
+    crud_audit.create_audit_entry(
+        db, user_id=current_user.id, action="update",
+        target_type="link", target_id=updated_link.id,
+        details={"short_code": updated_link.short_code, "summary": summary}
+    )
     return updated_link
 
 @router.delete("/{link_id}", response_model=link_schema.Link)
@@ -96,6 +154,14 @@ def delete_link(
     if link.owner_id != current_user.id and not current_user.is_superuser:
         raise HTTPException(status_code=403, detail="Not enough permissions")
     
+    crud_audit.create_audit_entry(
+        db, user_id=current_user.id, action="delete",
+        target_type="link", target_id=link.id,
+        details={
+            "short_code": link.short_code,
+            "summary": f"Deleted /{link.short_code} → {link.original_url[:80]}"
+        }
+    )
     crud_link.delete_link(db, db_link=link)
     return link
 

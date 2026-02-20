@@ -1,9 +1,9 @@
 import * as React from 'react';
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { Link as RouterLink } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
-import { fetchLinks, createLink, updateLink, deleteLink, fetchCampaigns, createCampaign, deleteCampaign, createLinksBulk, updateLinksBulk } from '../lib/api';
-import type { Link, Campaign } from '../lib/api';
+import { fetchLinks, createLink, updateLink, deleteLink, fetchCampaigns, createCampaign, deleteCampaign, createLinksBulk, updateLinksBulk, exportLinksCSV, importLinksCSV, fetchAuditLogs } from '../lib/api';
+import type { Link, Campaign, AuditLogEntry, ImportResult } from '../lib/api';
 import AdminPanel from './AdminPanel';
 import Navbar from './Navbar';
 
@@ -106,6 +106,19 @@ export default function Dashboard() {
     // Request Access State
     const [isRequesting, setIsRequesting] = useState(false);
     const [showAdminPanel, setShowAdminPanel] = useState(false);
+
+    // CSV Import/Export State
+    const [isExporting, setIsExporting] = useState(false);
+    const [isImporting, setIsImporting] = useState(false);
+    const [importResult, setImportResult] = useState<ImportResult | null>(null);
+    const fileInputRef = useRef<HTMLInputElement>(null);
+
+    // Activity Log State
+    const [showActivityLog, setShowActivityLog] = useState(false);
+    const [auditLogs, setAuditLogs] = useState<AuditLogEntry[]>([]);
+    const [isLoadingLogs, setIsLoadingLogs] = useState(false);
+    const [auditFilter, setAuditFilter] = useState('');
+    const [expandedLogId, setExpandedLogId] = useState<number | null>(null);
 
     const [isLoading, setIsLoading] = useState(true);
 
@@ -403,6 +416,58 @@ export default function Dashboard() {
         navigator.clipboard.writeText(url);
     }
 
+    // CSV Export/Import Handlers
+    async function handleExportCSV() {
+        if (!token) return;
+        try {
+            setIsExporting(true);
+            await exportLinksCSV(token);
+        } catch (err) {
+            alert('Failed to export links');
+        } finally {
+            setIsExporting(false);
+        }
+    }
+
+    async function handleImportCSV(e: React.ChangeEvent<HTMLInputElement>) {
+        const file = e.target.files?.[0];
+        if (!file || !token) return;
+        try {
+            setIsImporting(true);
+            setImportResult(null);
+            const result = await importLinksCSV(token, file);
+            setImportResult(result);
+            await loadData(); // Refresh links
+        } catch (err: any) {
+            alert(err.message || 'Failed to import links');
+        } finally {
+            setIsImporting(false);
+            if (fileInputRef.current) fileInputRef.current.value = '';
+        }
+    }
+
+    // Activity Log Handler
+    async function loadAuditLogs() {
+        if (!token) return;
+        try {
+            setIsLoadingLogs(true);
+            const logs = await fetchAuditLogs(token, {
+                action: auditFilter || undefined
+            });
+            setAuditLogs(logs);
+        } catch (err) {
+            console.error('Failed to load audit logs', err);
+        } finally {
+            setIsLoadingLogs(false);
+        }
+    }
+
+    useEffect(() => {
+        if (showActivityLog && token) {
+            loadAuditLogs();
+        }
+    }, [showActivityLog, auditFilter]);
+
     if (isLoading) return <div className="p-8 text-center text-white">Loading...</div>;
 
     // View for unapproved users
@@ -681,9 +746,49 @@ export default function Dashboard() {
                     {/* Right Column: Links List */}
                     <div className="lg:col-span-2 space-y-4">
                         <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-2">
-                            <div>
-                                <h2 className="text-xl font-bold text-white">Active Links</h2>
-                                <span className="text-sm text-gray-500">{links.length} results</span>
+                            <div className="flex items-center gap-4">
+                                <div>
+                                    <h2 className="text-xl font-bold text-white">Active Links</h2>
+                                    <span className="text-sm text-gray-500">{links.length} results</span>
+                                </div>
+                                <div className="flex gap-1">
+                                    <button
+                                        onClick={handleExportCSV}
+                                        disabled={isExporting}
+                                        className="p-2 text-gray-400 hover:text-green-400 hover:bg-green-400/10 rounded-lg transition-colors border border-transparent hover:border-green-400/20"
+                                        title="Export CSV"
+                                    >
+                                        <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+                                        </svg>
+                                    </button>
+                                    <button
+                                        onClick={() => fileInputRef.current?.click()}
+                                        disabled={isImporting}
+                                        className="p-2 text-gray-400 hover:text-purple-400 hover:bg-purple-400/10 rounded-lg transition-colors border border-transparent hover:border-purple-400/20"
+                                        title="Import CSV"
+                                    >
+                                        <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12" />
+                                        </svg>
+                                    </button>
+                                    <input
+                                        ref={fileInputRef}
+                                        type="file"
+                                        accept=".csv"
+                                        onChange={handleImportCSV}
+                                        className="hidden"
+                                    />
+                                    <button
+                                        onClick={() => setShowActivityLog(!showActivityLog)}
+                                        className={`p-2 rounded-lg transition-colors border border-transparent ${showActivityLog ? 'text-amber-400 bg-amber-400/10 border-amber-400/20' : 'text-gray-400 hover:text-amber-400 hover:bg-amber-400/10 hover:border-amber-400/20'}`}
+                                        title="Activity Log"
+                                    >
+                                        <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                                        </svg>
+                                    </button>
+                                </div>
                             </div>
 
                             <div className="flex gap-2 w-full sm:w-auto">
@@ -725,6 +830,106 @@ export default function Dashboard() {
                                 </select>
                             </div>
                         </div>
+
+                        {/* Import Result Banner */}
+                        {importResult && (
+                            <div className="mb-4 p-4 rounded-xl border bg-[#1c1c1c] border-gray-800">
+                                <div className="flex justify-between items-start">
+                                    <div>
+                                        <p className="text-white font-medium">Import Complete</p>
+                                        <p className="text-sm text-gray-400 mt-1">
+                                            <span className="text-green-400 font-medium">{importResult.created}</span> created
+                                            {importResult.skipped > 0 && (<>, <span className="text-yellow-400 font-medium">{importResult.skipped}</span> skipped</>)}
+                                        </p>
+                                        {importResult.errors.length > 0 && (
+                                            <ul className="mt-2 space-y-1">
+                                                {importResult.errors.slice(0, 5).map((err, i) => (
+                                                    <li key={i} className="text-xs text-gray-500">{err}</li>
+                                                ))}
+                                            </ul>
+                                        )}
+                                    </div>
+                                    <button onClick={() => setImportResult(null)} className="text-gray-500 hover:text-gray-300 text-sm">✕</button>
+                                </div>
+                            </div>
+                        )}
+
+                        {/* Activity Log Panel */}
+                        {showActivityLog && (
+                            <div className="mb-6 bg-[#1c1c1c] rounded-2xl border border-gray-800 overflow-hidden">
+                                <div className="p-4 border-b border-gray-800 flex items-center justify-between">
+                                    <h3 className="text-lg font-bold text-white">Activity Log</h3>
+                                    <select
+                                        value={auditFilter}
+                                        onChange={(e) => setAuditFilter(e.target.value)}
+                                        className="bg-[#2a2a2a] border border-gray-700 rounded-lg px-3 py-1.5 text-sm text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                    >
+                                        <option value="">All Actions</option>
+                                        <option value="create">Created</option>
+                                        <option value="update">Updated</option>
+                                        <option value="delete">Deleted</option>
+                                    </select>
+                                </div>
+                                <div className="max-h-80 overflow-y-auto">
+                                    {isLoadingLogs ? (
+                                        <div className="p-6 text-center text-gray-500">Loading activity...</div>
+                                    ) : auditLogs.length === 0 ? (
+                                        <div className="p-6 text-center text-gray-500">No activity recorded yet.</div>
+                                    ) : (
+                                        <div className="divide-y divide-gray-800/50">
+                                            {auditLogs.map(log => {
+                                                let details: Record<string, any> = {};
+                                                try { details = log.details ? JSON.parse(log.details) : {}; } catch { }
+                                                const actionColors: Record<string, string> = {
+                                                    create: 'text-green-400 bg-green-400/10 border-green-400/20',
+                                                    update: 'text-blue-400 bg-blue-400/10 border-blue-400/20',
+                                                    delete: 'text-red-400 bg-red-400/10 border-red-400/20',
+                                                };
+                                                return (
+                                                    <div key={log.id}>
+                                                        <div
+                                                            className="px-4 py-3 flex items-center gap-3 hover:bg-[#252525] transition-colors cursor-pointer"
+                                                            onClick={() => setExpandedLogId(expandedLogId === log.id ? null : log.id)}
+                                                        >
+                                                            <span className={`shrink-0 px-2 py-0.5 rounded-full text-xs font-medium border ${actionColors[log.action] || 'text-gray-400 bg-gray-400/10 border-gray-400/20'}`}>
+                                                                {log.action}
+                                                            </span>
+                                                            <div className="flex-1 min-w-0">
+                                                                <span className="text-sm text-white">
+                                                                    {log.target_type === 'link' && details.short_code
+                                                                        ? <span className="font-mono text-blue-300">/{details.short_code}</span>
+                                                                        : log.target_type === 'campaign' && details.name
+                                                                            ? <span className="text-purple-300">{details.name}</span>
+                                                                            : <span>{log.target_type} #{log.target_id}</span>
+                                                                    }
+                                                                </span>
+                                                                {details.bulk_update && (
+                                                                    <span className="text-xs text-purple-400 ml-2">(bulk)</span>
+                                                                )}
+                                                            </div>
+                                                            {log.username && (
+                                                                <span className="text-xs text-gray-500">@{log.username}</span>
+                                                            )}
+                                                            <span className="text-xs text-gray-600 whitespace-nowrap">
+                                                                {new Date(log.timestamp).toLocaleString()}
+                                                            </span>
+                                                            <svg className={`w-3.5 h-3.5 text-gray-600 shrink-0 transition-transform ${expandedLogId === log.id ? 'rotate-180' : ''}`} fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                                                            </svg>
+                                                        </div>
+                                                        {expandedLogId === log.id && details.summary && (
+                                                            <div className="px-4 pb-3 pl-[4.5rem]">
+                                                                <p className="text-xs text-gray-400 leading-relaxed">{details.summary}</p>
+                                                            </div>
+                                                        )}
+                                                    </div>
+                                                );
+                                            })}
+                                        </div>
+                                    )}
+                                </div>
+                            </div>
+                        )}
 
                         {links.length === 0 ? (
                             <div className="flex flex-col items-center justify-center py-16 bg-[#1c1c1c] rounded-2xl border border-gray-800 border-dashed text-gray-500">
