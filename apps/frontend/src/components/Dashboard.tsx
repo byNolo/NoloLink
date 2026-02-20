@@ -1,3 +1,4 @@
+import * as React from 'react';
 import { useState, useEffect } from 'react';
 import { Link as RouterLink } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
@@ -13,6 +14,9 @@ export default function Dashboard() {
     // Create State
     const [newUrl, setNewUrl] = useState('');
     const [createSlug, setCreateSlug] = useState('');
+    const [createTitle, setCreateTitle] = useState('');
+    const [createTags, setCreateTags] = useState('');
+    const [createRedirectType, setCreateRedirectType] = useState(302);
     const [createPassword, setCreatePassword] = useState('');
     const [createRequireLogin, setCreateRequireLogin] = useState(false);
     const [createAllowedEmails, setCreateAllowedEmails] = useState('');
@@ -25,6 +29,9 @@ export default function Dashboard() {
     const [editingLink, setEditingLink] = useState<Link | null>(null);
     const [editUrl, setEditUrl] = useState('');
     const [editSlug, setEditSlug] = useState('');
+    const [editTitle, setEditTitle] = useState('');
+    const [editTags, setEditTags] = useState('');
+    const [editRedirectType, setEditRedirectType] = useState(302);
     const [editPassword, setEditPassword] = useState('');
     const [editRequireLogin, setEditRequireLogin] = useState(false);
     const [editAllowedEmails, setEditAllowedEmails] = useState('');
@@ -106,11 +113,17 @@ export default function Dashboard() {
                 require_login: createRequireLogin,
                 allowed_emails: createAllowedEmails || undefined,
                 expires_at: expiresAtISO,
-                track_activity: createTrackActivity
+                track_activity: createTrackActivity,
+                title: createTitle || undefined,
+                tags: createTags || undefined,
+                redirect_type: createRedirectType
             });
             setLinks([created, ...links]);
             setNewUrl('');
             setCreateSlug('');
+            setCreateTitle('');
+            setCreateTags('');
+            setCreateRedirectType(302);
             setCreatePassword('');
             setCreateRequireLogin(false);
             setCreateAllowedEmails('');
@@ -159,7 +172,10 @@ export default function Dashboard() {
                 allowed_emails: editAllowedEmails || undefined,
                 expires_at: expiresAtISO,
                 is_active: editIsActive,
-                track_activity: editTrackActivity
+                track_activity: editTrackActivity,
+                title: editTitle || undefined,
+                tags: editTags || undefined,
+                redirect_type: editRedirectType
             });
 
             setLinks(links.map(l => l.id === updated.id ? updated : l));
@@ -175,6 +191,9 @@ export default function Dashboard() {
         setEditingLink(link);
         setEditUrl(link.original_url);
         setEditSlug(link.short_code);
+        setEditTitle(link.title || '');
+        setEditTags(link.tags || '');
+        setEditRedirectType(link.redirect_type || 302);
         setEditPassword(''); // Don't show existing hash
         setEditRequireLogin(link.require_login);
         setEditAllowedEmails(link.allowed_emails || '');
@@ -302,6 +321,30 @@ export default function Dashboard() {
                                     </div>
                                 </div>
 
+                                <div>
+                                    <label htmlFor="title" className="block text-sm font-medium text-gray-400 mb-1">Title (Optional)</label>
+                                    <input
+                                        id="title"
+                                        type="text"
+                                        value={createTitle}
+                                        onChange={(e) => setCreateTitle(e.target.value)}
+                                        placeholder="My Cool Link"
+                                        className="w-full bg-[#2a2a2a] border border-gray-700 rounded-xl px-4 py-3 text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
+                                    />
+                                </div>
+
+                                <div>
+                                    <label htmlFor="tags" className="block text-sm font-medium text-gray-400 mb-1">Tags</label>
+                                    <input
+                                        id="tags"
+                                        type="text"
+                                        value={createTags}
+                                        onChange={(e) => setCreateTags(e.target.value)}
+                                        placeholder="blog, personal, tech"
+                                        className="w-full bg-[#2a2a2a] border border-gray-700 rounded-xl px-4 py-3 text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
+                                    />
+                                </div>
+
                                 <div className="border-t border-gray-800 pt-4 mt-2">
                                     <h3 className="text-sm font-semibold text-gray-300 mb-3">Access Control</h3>
                                     <div className="space-y-3">
@@ -360,6 +403,19 @@ export default function Dashboard() {
                                                 className="w-full bg-[#2a2a2a] border border-gray-700 rounded-xl px-4 py-2 text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all text-sm"
                                             />
                                         </div>
+                                        <div>
+                                            <label className="block text-sm font-medium text-gray-400 mb-1">Redirect Type</label>
+                                            <select
+                                                value={createRedirectType}
+                                                onChange={(e) => setCreateRedirectType(Number(e.target.value))}
+                                                className="w-full bg-[#2a2a2a] border border-gray-700 rounded-xl px-4 py-2 text-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all text-sm"
+                                            >
+                                                <option value={301}>301 Moved Permanently (SEO)</option>
+                                                <option value={302}>302 Found (Temporary)</option>
+                                                <option value={307}>307 Temporary Redirect</option>
+                                                <option value={308}>308 Permanent Redirect</option>
+                                            </select>
+                                        </div>
                                     </div>
                                 </div>
                                 <button
@@ -412,10 +468,20 @@ export default function Dashboard() {
                                                             Disabled
                                                         </span>
                                                     )}
+                                                    {link.title && <span className="text-white font-medium ml-2">- {link.title}</span>}
                                                 </div>
                                                 <p className="text-gray-400 text-sm truncate pr-4" title={link.original_url}>
                                                     {link.original_url}
                                                 </p>
+                                                {link.tags && (
+                                                    <div className="flex flex-wrap gap-1 mt-1">
+                                                        {link.tags.split(',').map((tag, i) => (
+                                                            <span key={i} className="px-2 py-0.5 rounded-md bg-gray-800 text-xs text-gray-400 border border-gray-700">
+                                                                {tag.trim()}
+                                                            </span>
+                                                        ))}
+                                                    </div>
+                                                )}
                                                 {link.expires_at && (
                                                     <div className="flex items-center gap-1 mt-2 text-xs text-yellow-500/80">
                                                         <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -472,7 +538,7 @@ export default function Dashboard() {
             {
                 editingLink && (
                     <div className="fixed inset-0 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4 z-50">
-                        <div className="bg-[#1c1c1c] rounded-2xl shadow-2xl border border-gray-800 w-full max-w-lg p-6">
+                        <div className="bg-[#1c1c1c] rounded-2xl shadow-2xl border border-gray-800 w-full max-w-lg p-6 max-h-[90vh] overflow-y-auto">
                             <h2 className="text-xl font-bold mb-6 text-white">Edit Link</h2>
                             <form onSubmit={handleUpdateLink} className="space-y-4">
                                 <div>
@@ -492,6 +558,25 @@ export default function Dashboard() {
                                         value={editSlug}
                                         onChange={(e) => setEditSlug(e.target.value)}
                                         required
+                                        className="w-full bg-[#2a2a2a] border border-gray-700 rounded-xl px-4 py-3 text-white focus:ring-2 focus:ring-blue-500 focus:outline-none"
+                                    />
+                                </div>
+                                <div>
+                                    <label className="block text-sm font-medium text-gray-400 mb-1">Title</label>
+                                    <input
+                                        type="text"
+                                        value={editTitle}
+                                        onChange={(e) => setEditTitle(e.target.value)}
+                                        className="w-full bg-[#2a2a2a] border border-gray-700 rounded-xl px-4 py-3 text-white focus:ring-2 focus:ring-blue-500 focus:outline-none"
+                                    />
+                                </div>
+                                <div>
+                                    <label className="block text-sm font-medium text-gray-400 mb-1">Tags</label>
+                                    <input
+                                        type="text"
+                                        value={editTags}
+                                        onChange={(e) => setEditTags(e.target.value)}
+                                        placeholder="Comma separated"
                                         className="w-full bg-[#2a2a2a] border border-gray-700 rounded-xl px-4 py-3 text-white focus:ring-2 focus:ring-blue-500 focus:outline-none"
                                     />
                                 </div>
@@ -541,6 +626,23 @@ export default function Dashboard() {
                                                     className={`toggle-label block overflow-hidden h-6 rounded-full cursor-pointer transition-colors duration-200 ${editTrackActivity ? 'bg-blue-600' : 'bg-gray-600'}`}
                                                 ></label>
                                             </div>
+                                        </div>
+
+                                        <div className="flex items-center justify-between p-3 bg-[#2a2a2a] rounded-xl border border-gray-700">
+                                            <div className="flex flex-col">
+                                                <span className="text-sm font-medium text-white">Redirect Type</span>
+                                                <span className="text-xs text-gray-400">HTTP Status Code</span>
+                                            </div>
+                                            <select
+                                                value={editRedirectType}
+                                                onChange={(e) => setEditRedirectType(Number(e.target.value))}
+                                                className="bg-[#1c1c1c] border border-gray-600 rounded-lg px-2 py-1 text-white text-sm focus:outline-none focus:ring-1 focus:ring-blue-500"
+                                            >
+                                                <option value={301}>301 (SEO)</option>
+                                                <option value={302}>302 (Temp)</option>
+                                                <option value={307}>307 (Temp)</option>
+                                                <option value={308}>308 (Perm)</option>
+                                            </select>
                                         </div>
                                     </div>
                                 </div>

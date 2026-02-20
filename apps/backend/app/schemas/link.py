@@ -7,10 +7,11 @@ from pydantic import BaseModel, HttpUrl, field_validator
 class LinkBase(BaseModel):
     original_url: str
     short_code: Optional[str] = None # Optional on creation, can be auto-generated
+    title: Optional[str] = None
+    tags: Optional[str] = None
+    redirect_type: Optional[int] = 302
     is_active: Optional[bool] = True
     track_activity: Optional[bool] = True
-    require_login: Optional[bool] = False
-    allowed_emails: Optional[str] = None # JSON string
     require_login: Optional[bool] = False
     allowed_emails: Optional[str] = None # JSON string
     expires_at: Optional[datetime] = None
@@ -56,6 +57,9 @@ class Link(LinkBase):
     owner_id: int
     clicks: int
     created_at: datetime
+    title: Optional[str] = None
+    tags: Optional[str] = None
+    redirect_type: Optional[int] = 302
     # We don't return password_hash
 
     # Analytics Data (Optional, populated in stats endpoint)

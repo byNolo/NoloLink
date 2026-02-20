@@ -62,4 +62,4 @@ def redirect_to_url(short_code: str, request: Request, db: Session = Depends(get
     except Exception as e:
         print(f"Error capturing click analytics: {e}")
     
-    return RedirectResponse(link.original_url, status_code=status.HTTP_302_FOUND)
+    return RedirectResponse(link.original_url, status_code=link.redirect_type or 302)

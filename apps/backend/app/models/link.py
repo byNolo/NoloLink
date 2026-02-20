@@ -13,6 +13,12 @@ class Link(Base):
     is_active = Column(Boolean, default=True)
     is_deleted = Column(Boolean, default=False)
     track_activity = Column(Boolean, default=True) # New: Enable/Disable detailed tracking
+    
+    # New Features
+    title = Column(String, nullable=True)
+    tags = Column(String, nullable=True) # JSON list of tags
+    redirect_type = Column(Integer, default=302)
+
     clicks = Column(Integer, default=0)
     created_at = Column(DateTime(timezone=True), server_default=func.now())
     

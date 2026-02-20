@@ -37,6 +37,9 @@ def create_link(db: Session, link: LinkCreate, owner_id: int):
         short_code=code,
         original_url=str(link.original_url),
         owner_id=owner_id,
+        title=link.title,
+        tags=link.tags,
+        redirect_type=link.redirect_type or 302,
         is_active=link.is_active,
         require_login=link.require_login,
         allowed_emails=link.allowed_emails,
@@ -59,6 +62,11 @@ def update_link(db: Session, db_link: Link, link_update: LinkUpdate):
         db_link.short_code = link_update.short_code
     
     db_link.original_url = str(link_update.original_url)
+    db_link.title = link_update.title
+    db_link.tags = link_update.tags
+    if link_update.redirect_type:
+        db_link.redirect_type = link_update.redirect_type
+
     db_link.is_active = link_update.is_active
     db_link.track_activity = link_update.track_activity
 
