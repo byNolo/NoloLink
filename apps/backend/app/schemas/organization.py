@@ -10,6 +10,9 @@ class OrgCreate(BaseModel):
 
 class OrgUpdate(BaseModel):
     name: Optional[str] = None
+    is_link_privacy_enabled: Optional[bool] = None
+    allow_member_delete: Optional[bool] = None
+    allow_member_edit: Optional[bool] = None
 
 
 class Organization(BaseModel):
@@ -18,6 +21,9 @@ class Organization(BaseModel):
     slug: str
     plan: str
     is_active: bool
+    is_link_privacy_enabled: bool
+    allow_member_delete: bool
+    allow_member_edit: bool
     created_at: Optional[datetime] = None
 
     class Config:

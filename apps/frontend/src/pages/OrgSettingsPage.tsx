@@ -1,15 +1,16 @@
 import { useState, useEffect } from 'react';
 import { useAuth } from '../context/AuthContext';
-import { fetchOrgMembers, fetchInvites, createInvite, revokeInvite, updateMemberRole, removeMember, updateOrg } from '../lib/api';
-import type { OrgMember, OrgInvite } from '../lib/api';
+import { fetchOrgMembers, fetchInvites, createInvite, revokeInvite, updateMemberRole, removeMember, updateOrg, fetchOrgDetails } from '../lib/api';
+import type { OrgMember, OrgInvite, Organization } from '../lib/api';
 import Navbar from '../components/Navbar';
 
 export default function OrgSettingsPage() {
     const { token, user, currentOrg, refreshOrgs } = useAuth();
-    const [activeTab, setActiveTab] = useState<'general' | 'members' | 'invites'>('general');
+    const [activeTab, setActiveTab] = useState<'general' | 'policies' | 'members' | 'invites'>('general');
     const [members, setMembers] = useState<OrgMember[]>([]);
     const [invites, setInvites] = useState<OrgInvite[]>([]);
     const [isLoading, setIsLoading] = useState(true);
+    const [fullOrg, setFullOrg] = useState<Organization | null>(null);
 
     // General tab
     const [orgName, setOrgName] = useState('');
@@ -22,6 +23,9 @@ export default function OrgSettingsPage() {
     const [inviteLoading, setInviteLoading] = useState(false);
     const [inviteMsg, setInviteMsg] = useState('');
 
+    // Policies tab
+    const [poliSaving, setPoliSaving] = useState(false);
+
     const orgId = currentOrg?.org_id;
     const myRole = currentOrg?.role;
     const isOwner = myRole === 'owner';
@@ -30,7 +34,6 @@ export default function OrgSettingsPage() {
     useEffect(() => {
         if (token && orgId) {
             loadData();
-            setOrgName(currentOrg?.org_name || '');
         }
     }, [token, orgId]);
 
@@ -38,12 +41,15 @@ export default function OrgSettingsPage() {
         if (!token || !orgId) return;
         setIsLoading(true);
         try {
-            const [m, i] = await Promise.all([
+            const [m, i, d] = await Promise.all([
                 fetchOrgMembers(token, orgId),
                 isAdmin ? fetchInvites(token, orgId) : Promise.resolve([]),
+                fetchOrgDetails(token, orgId),
             ]);
             setMembers(m);
             setInvites(i);
+            setFullOrg(d);
+            setOrgName(d.name);
         } catch (err) {
             console.error(err);
         } finally {
@@ -64,6 +70,19 @@ export default function OrgSettingsPage() {
             setSaveMsg('Failed to save');
         } finally {
             setIsSaving(false);
+        }
+    }
+
+    async function handleUpdatePolicy(field: string, value: boolean) {
+        if (!token || !orgId || !isOwner) return;
+        setPoliSaving(true);
+        try {
+            await updateOrg(token, orgId, { [field]: value });
+            await loadData();
+        } catch (err) {
+            alert('Failed to update policy');
+        } finally {
+            setPoliSaving(false);
         }
     }
 
@@ -144,6 +163,7 @@ export default function OrgSettingsPage() {
 
     const tabs = [
         { id: 'general' as const, label: 'General' },
+        { id: 'policies' as const, label: 'Policies' },
         { id: 'members' as const, label: `Members (${members.length})` },
         { id: 'invites' as const, label: `Invites (${invites.length})` },
     ];
@@ -209,6 +229,60 @@ export default function OrgSettingsPage() {
                                             {isSaving ? 'Saving...' : 'Save Changes'}
                                         </button>
                                         {saveMsg && <span className="text-sm text-green-400">{saveMsg}</span>}
+                                    </div>
+                                </div>
+                            </div>
+                        )}
+
+                        {/* Policies Tab */}
+                        {activeTab === 'policies' && fullOrg && (
+                            <div className="bg-[#1c1c1c] rounded-2xl border border-gray-800 p-6">
+                                <h2 className="text-lg font-bold text-white mb-6">Member Policies</h2>
+                                <p className="text-sm text-gray-500 mb-8 max-w-lg">
+                                    Configure how members interact with organization data. Only owners can modify these settings.
+                                </p>
+
+                                <div className="space-y-6 max-w-2xl">
+                                    <div className="flex items-center justify-between p-4 bg-[#0f0f0f] rounded-xl border border-gray-800">
+                                        <div>
+                                            <div className="text-sm font-semibold text-white mb-1">Link Privacy</div>
+                                            <p className="text-xs text-gray-500">When enabled, members only see the links they created.</p>
+                                        </div>
+                                        <button
+                                            onClick={() => handleUpdatePolicy('is_link_privacy_enabled', !fullOrg.is_link_privacy_enabled)}
+                                            disabled={!isOwner || poliSaving}
+                                            className={`relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none ${fullOrg.is_link_privacy_enabled ? 'bg-blue-600' : 'bg-gray-700'}`}
+                                        >
+                                            <span className={`pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow-sm ring-0 transition duration-200 ease-in-out ${fullOrg.is_link_privacy_enabled ? 'translate-x-5' : 'translate-x-0'}`} />
+                                        </button>
+                                    </div>
+
+                                    <div className="flex items-center justify-between p-4 bg-[#0f0f0f] rounded-xl border border-gray-800">
+                                        <div>
+                                            <div className="text-sm font-semibold text-white mb-1">Allow Member Deletion</div>
+                                            <p className="text-xs text-gray-500">When disabled, regular members cannot delete their own links.</p>
+                                        </div>
+                                        <button
+                                            onClick={() => handleUpdatePolicy('allow_member_delete', !fullOrg.allow_member_delete)}
+                                            disabled={!isOwner || poliSaving}
+                                            className={`relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none ${fullOrg.allow_member_delete ? 'bg-blue-600' : 'bg-gray-700'}`}
+                                        >
+                                            <span className={`pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow-sm ring-0 transition duration-200 ease-in-out ${fullOrg.allow_member_delete ? 'translate-x-5' : 'translate-x-0'}`} />
+                                        </button>
+                                    </div>
+
+                                    <div className="flex items-center justify-between p-4 bg-[#0f0f0f] rounded-xl border border-gray-800">
+                                        <div>
+                                            <div className="text-sm font-semibold text-white mb-1">Allow Member Editing</div>
+                                            <p className="text-xs text-gray-500">When disabled, regular members cannot edit their own links.</p>
+                                        </div>
+                                        <button
+                                            onClick={() => handleUpdatePolicy('allow_member_edit', !fullOrg.allow_member_edit)}
+                                            disabled={!isOwner || poliSaving}
+                                            className={`relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none ${fullOrg.allow_member_edit ? 'bg-blue-600' : 'bg-gray-700'}`}
+                                        >
+                                            <span className={`pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow-sm ring-0 transition duration-200 ease-in-out ${fullOrg.allow_member_edit ? 'translate-x-5' : 'translate-x-0'}`} />
+                                        </button>
                                     </div>
                                 </div>
                             </div>

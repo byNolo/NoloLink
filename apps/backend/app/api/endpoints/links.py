@@ -28,8 +28,14 @@ def read_links(
         "campaign_id": campaign_id,
         "is_active": is_active
     }
-    # Admins/owners see all org links, members see only their own
-    if org_ctx.role in ("owner", "admin") or current_user.is_superuser:
+    # Admins/owners see all org links, members see only their own UNLESS privacy is disabled
+    show_all = (
+        org_ctx.role in ("owner", "admin") or 
+        current_user.is_superuser or 
+        not org_ctx.org.is_link_privacy_enabled
+    )
+    
+    if show_all:
         return crud_link.get_links(db, org_id=org_ctx.org.id, skip=skip, limit=limit, filters=filters)
     else:
         return crud_link.get_links(db, org_id=org_ctx.org.id, owner_id=current_user.id, skip=skip, limit=limit, filters=filters)
@@ -122,9 +128,12 @@ def update_link(
         raise HTTPException(status_code=404, detail="Link not found")
     if link.org_id != org_ctx.org.id:
         raise HTTPException(status_code=404, detail="Link not found")
-    # Members can only edit their own links
-    if link.owner_id != current_user.id and not current_user.is_superuser and org_ctx.role not in ("owner", "admin"):
-        raise HTTPException(status_code=403, detail="Not enough permissions")
+    # Members can only edit their own links, and only if allowed by org settings
+    if org_ctx.role not in ("owner", "admin") and not current_user.is_superuser:
+        if link.owner_id != current_user.id:
+            raise HTTPException(status_code=403, detail="Not enough permissions")
+        if not org_ctx.org.allow_member_edit:
+            raise HTTPException(status_code=403, detail="Member editing is disabled for this organization")
     
     updated_link = crud_link.update_link(db=db, db_link=link, link_update=link_in)
     if not updated_link:
@@ -172,8 +181,12 @@ def delete_link(
         raise HTTPException(status_code=404, detail="Link not found")
     if link.org_id != org_ctx.org.id:
         raise HTTPException(status_code=404, detail="Link not found")
-    if link.owner_id != current_user.id and not current_user.is_superuser and org_ctx.role not in ("owner", "admin"):
-        raise HTTPException(status_code=403, detail="Not enough permissions")
+    # Members can only delete their own links, and only if allowed by org settings
+    if org_ctx.role not in ("owner", "admin") and not current_user.is_superuser:
+        if link.owner_id != current_user.id:
+            raise HTTPException(status_code=403, detail="Not enough permissions")
+        if not org_ctx.org.allow_member_delete:
+            raise HTTPException(status_code=403, detail="Member deletion is disabled for this organization")
     
     crud_audit.create_audit_entry(
         db, user_id=current_user.id, action="delete",

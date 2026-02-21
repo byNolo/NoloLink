@@ -77,7 +77,7 @@ export default function Navbar() {
                                                     className={`w-full flex items-center gap-3 px-3 py-2.5 text-left hover:bg-[#252525] transition-colors ${currentOrg?.org_id === org.org_id ? 'bg-blue-600/5 border-l-2 border-blue-500' : 'border-l-2 border-transparent'
                                                         }`}
                                                 >
-                                                    <div className="w-7 h-7 rounded-lg bg-linear-to-br from-blue-600 to-purple-600 flex items-center justify-center text-xs font-bold text-white flex-shrink-0">
+                                                    <div className="w-7 h-7 rounded-lg bg-linear-to-br from-blue-600 to-purple-600 flex items-center justify-center text-xs font-bold text-white shrink-0">
                                                         {org.org_name.charAt(0).toUpperCase()}
                                                     </div>
                                                     <div className="flex-1 min-w-0">
@@ -86,7 +86,7 @@ export default function Navbar() {
                                                     </div>
                                                     {roleBadge(org.role)}
                                                     {currentOrg?.org_id === org.org_id && (
-                                                        <svg className="w-4 h-4 text-blue-400 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20"><path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" /></svg>
+                                                        <svg className="w-4 h-4 text-blue-400 shrink-0" fill="currentColor" viewBox="0 0 20 20"><path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" /></svg>
                                                     )}
                                                 </button>
                                             ))}

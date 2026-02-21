@@ -148,6 +148,13 @@ def update_org(db: Session, org: Organization, update_data: OrgUpdate) -> Organi
     if update_data.name is not None:
         org.name = update_data.name
         org.slug = slugify(update_data.name)
+    if update_data.is_link_privacy_enabled is not None:
+        org.is_link_privacy_enabled = update_data.is_link_privacy_enabled
+    if update_data.allow_member_delete is not None:
+        org.allow_member_delete = update_data.allow_member_delete
+    if update_data.allow_member_edit is not None:
+        org.allow_member_edit = update_data.allow_member_edit
+        
     db.commit()
     db.refresh(org)
     return org

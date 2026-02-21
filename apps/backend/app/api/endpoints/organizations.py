@@ -143,13 +143,23 @@ def update_org(
     db: Session = Depends(get_db),
     current_user: User = Depends(deps.get_current_active_user)
 ):
-    """Update org (admin+ or superuser)."""
+    """Update org (admin+ or superuser). Only owners can change policies."""
     org = crud_org.get_org(db, org_id=org_id)
     if not org:
         raise HTTPException(status_code=404, detail="Organization not found")
     membership = crud_org.get_membership(db, user_id=current_user.id, org_id=org_id)
+    
     if not current_user.is_superuser and (not membership or membership.role not in ("owner", "admin")):
         raise HTTPException(status_code=403, detail="Insufficient permissions")
+    
+    # Restrict policy updates to owners only
+    policy_fields = ["is_link_privacy_enabled", "allow_member_delete", "allow_member_edit"]
+    changing_policies = any(getattr(org_data, field) is not None for field in policy_fields)
+    
+    if changing_policies and not current_user.is_superuser:
+        if not membership or membership.role != "owner":
+            raise HTTPException(status_code=403, detail="Only organization owners can change member policies")
+
     return crud_org.update_org(db, org=org, update_data=org_data)
 
 

@@ -1,12 +1,10 @@
-from pydantic import BaseModel, HttpUrl
+from pydantic import BaseModel, HttpUrl, field_validator
 from typing import Optional
 from datetime import datetime
 
-from pydantic import BaseModel, HttpUrl, field_validator
-
 class LinkBase(BaseModel):
-    original_url: str
-    short_code: Optional[str] = None # Optional on creation, can be auto-generated
+    # Common fields between Create, Update, and Response
+    short_code: Optional[str] = None
     title: Optional[str] = None
     tags: Optional[str] = None
     redirect_type: Optional[int] = 302
@@ -25,6 +23,7 @@ class LinkBase(BaseModel):
     utm_content: Optional[str] = None
 
 class LinkCreate(LinkBase):
+    original_url: str # Required on creation
     password: Optional[str] = None
 
     @field_validator('password')
@@ -42,6 +41,7 @@ class LinkCreate(LinkBase):
         return v
 
 class LinkUpdate(LinkBase):
+    original_url: Optional[str] = None # Optional on update
     password: Optional[str] = None # If provided, updates the hash
 
     @field_validator('password')
@@ -75,22 +75,14 @@ class LinkBulkUpdate(BaseModel):
     utm_term: Optional[str] = None
     utm_content: Optional[str] = None
     
-    # We use a special value to indicate "clear this field" if needed, 
-    # but for simplicity in this version, purely optional means "don't update if null".
-    # To clear a campaign, the frontend can send campaign_id=-1 or similar, handled in CRUD.
-    # For now, we'll assume explicit values update, None means "no change".
-
 class Link(LinkBase):
     id: int
+    original_url: str 
     short_code: str
     owner_id: int
     org_id: Optional[int] = None
     clicks: int
     created_at: datetime
-    title: Optional[str] = None
-    tags: Optional[str] = None
-    redirect_type: Optional[int] = 302
-    campaign_id: Optional[int] = None
     # We don't return password_hash
 
     # Analytics Data (Optional, populated in stats endpoint)

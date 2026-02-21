@@ -13,6 +13,12 @@ class Organization(Base):
     slug = Column(String, unique=True, index=True, nullable=False)
     plan = Column(String, default="free")  # free | pro | enterprise
     is_active = Column(Boolean, default=True)
+    
+    # Advanced Settings
+    is_link_privacy_enabled = Column(Boolean, default=True)
+    allow_member_delete = Column(Boolean, default=True)
+    allow_member_edit = Column(Boolean, default=True)
+    
     created_at = Column(DateTime(timezone=True), server_default=func.now())
 
     # Relationships

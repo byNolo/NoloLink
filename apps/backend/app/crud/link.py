@@ -122,8 +122,11 @@ def update_link(db: Session, db_link: Link, link_update: LinkUpdate):
     if link_update.short_code:
         db_link.short_code = link_update.short_code
     
-    db_link.original_url = str(link_update.original_url)
-    db_link.title = link_update.title
+    if link_update.original_url is not None:
+        db_link.original_url = str(link_update.original_url)
+    
+    if link_update.title is not None:
+        db_link.title = link_update.title
     db_link.tags = link_update.tags
     if link_update.redirect_type:
         db_link.redirect_type = link_update.redirect_type
