@@ -21,13 +21,13 @@ Shorten · Track · Secure · Manage · Analyze
 | Capability | What You Get | Notes |
 |------------|--------------|-------|
 | **Link Management** | Create, edit, and delete short URLs | Custom aliases supported |
+| **Organization Support** | Multi-tenancy with granular roles | Owner, Admin, Member roles |
 | **Secure Authentication** | Integrated OAuth 2.0 with KeyN | seamless identity management |
 | **Advanced Analytics** | Deep insights on audience & traffic | Countries, Referrers, Devices |
-| **Smart Stats Access** | Public stats via `code+` (if owner) | Unauthorized users redirected |
+| **Smart Stats Access** | Stats visualization via `/code+` | Respects org privacy settings |
+| **Superuser Tools** | Global admin dashboard (/admin) | Manage all orgs and users |
 | **QR Code Integration** | Instant QR generation for sharing | Downloadable & scannable |
-| **Granular Access** | Role-based permissions & approval workflow | Admin controls user onboarding |
 | **Responsive UI** | Modern, dark-themed dashboard | Built with React + Tailwind CSS |
-| **Deployment Ready** | Container-friendly architecture | Easy to self-host |
 
 ---
 
@@ -44,13 +44,19 @@ Shorten · Track · Secure · Manage · Analyze
 
 ## Features
 
-Modern URL shortening with security at its core:
+Modern URL shortening with security and multi-tenancy at its core:
 *   **Secure Authentication** - Seamless integration with KeyN OAuth for user identity.
+*   **Organization Management** - Robust multi-tenancy support:
+    *   **Workspaces**: Group links and members into distinct organizations.
+    *   **Role-Based Access**: Owner, Admin, and Member roles with granular permissions.
+    *   **Ownership Transfer**: Securely hand off organization ownership to other members.
+    *   **Policies**: Organization-level settings to control link privacy and member permissions (edit/delete).
+*   **Superuser Control** - Global administrative dashboard (`/admin`) to manage all organizations, users, and access requests.
 *   **Advanced Link Management** - Create, edit, delete, and manage custom short links.
 *   **Campaign Management** - Organize links into campaigns for better tracking and management.
-*   **Bulk Operations** - Efficiently create and edit multiple links simultaneously.
+*   **Bulk Operations** - Efficiently create and edit multiple links simultaneously, now including bulk expiration date settings.
 *   **Enhanced Link Control** - Granular control with:
-    *   **Expiration Dates**: Set links to auto-expire.
+    *   **Expiration Dates**: Set links to auto-expire (supports local time on dashboard).
     *   **Custom Redirects**: Support for 301, 302, 307, and 308 status codes.
     *   **Tags**: Categorize links for easy filtering.
 *   **Advanced Analytics** - Comprehensive insights:
@@ -58,12 +64,11 @@ Modern URL shortening with security at its core:
     *   **Geographic Data**: Top countries by visitor IP.
     *   **Device Breakdown**: Stats by device type (Mobile, Desktop, Tablet).
     *   **UTM Builder**: Append tracking parameters (`utm_source`, `utm_medium`, etc.) to URLs before shortening.
-    *   *Privacy Control*: Per-link toggle to enable/disable detailed tracking.
+    *   **Privacy Control**: Per-link toggle to enable/disable detailed tracking.
 *   **QR Code Integration** - Auto-generated QR codes for instant mobile sharing.
 *   **Smart Stats Access** - Append `+` to any short link to view its stats (e.g., `s.bynolo.ca/code+`).
-    *   *Security Feature*: Only the Link Owner can view stats. Unauthorized users are auto-redirected to the link destination.
+    *   **Security Feature**: Respects organization privacy settings. Unauthorized users are auto-redirected to the link destination.
 *   **Legal & Compliance** - Built-in Terms of Service and Privacy Policy pages.
-*   **Granular Access Control** - Role-based permissions with an Admin approval system for new users.
 *   **Responsive Experience** - Sleek, dark-themed UI built with React and Tailwind CSS.
 
 ---
@@ -157,7 +162,7 @@ NoloLink has a comprehensive test suite covering both backend and frontend.
 
 ```bash
 make test            # Run all tests (backend + frontend)
-make test-backend    # Backend only — 87 tests (pytest)
+make test-backend    # Backend only — 97 tests (pytest)
 make test-frontend   # Frontend only — 49 tests (Vitest)
 ```
 
@@ -165,8 +170,8 @@ make test-frontend   # Frontend only — 49 tests (Vitest)
 
 | Suite | Framework | Tests | Areas Covered |
 |-------|-----------|-------|---------------|
-| **Backend** | pytest + TestClient | 87 | Links, Campaigns, Redirect, Verify, Users, Export/Import, Audit, UTM |
-| **Frontend** | Vitest + React Testing Library | 49 | Routing, Auth, API layer, Pages, Components, UTM UI |
+| **Backend** | pytest + TestClient | 97 | Links, Campaigns, Redirect, Verify, Users, Export/Import, Audit, UTM, Org Policies |
+| **Frontend** | Vitest + React Testing Library | 49 | Routing, Auth, API layer, Pages, Components, UTM UI, Stats |
 
 ### Writing New Tests
 

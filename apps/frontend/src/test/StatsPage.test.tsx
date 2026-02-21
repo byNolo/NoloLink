@@ -35,7 +35,8 @@ describe('StatsPage', () => {
 
     it('renders link stats after loading', async () => {
         // First call: user profile (from AuthProvider)
-        // Subsequent calls: stats API
+        // Second call: user orgs (from AuthProvider)
+        // Third call: stats API
         mockFetch
             .mockResolvedValueOnce({
                 ok: true,
@@ -43,6 +44,12 @@ describe('StatsPage', () => {
                     id: 1, username: 'testuser', email: 'test@example.com',
                     is_active: true, is_superuser: false, is_approved: true, request_status: 'approved',
                 }),
+            })
+            .mockResolvedValueOnce({
+                ok: true,
+                json: async () => ([{
+                    id: 1, org_id: 1, org_name: 'Test Org', org_slug: 'test-org', role: 'owner', joined_at: '2026-01-01T00:00:00Z'
+                }]),
             })
             .mockResolvedValueOnce({
                 ok: true,
@@ -58,6 +65,7 @@ describe('StatsPage', () => {
                     top_countries: [{ country: 'US', count: 20 }],
                     top_referrers: [{ referrer: 'Direct', count: 30 }],
                     device_breakdown: [{ device: 'Desktop', count: 25 }],
+                    track_activity: true,
                 }),
             });
 
@@ -76,6 +84,12 @@ describe('StatsPage', () => {
                     id: 1, username: 'testuser', email: 'test@example.com',
                     is_active: true, is_superuser: false, is_approved: true, request_status: 'approved',
                 }),
+            })
+            .mockResolvedValueOnce({
+                ok: true,
+                json: async () => ([{
+                    id: 1, org_id: 1, org_name: 'Test Org', org_slug: 'test-org', role: 'owner', joined_at: '2026-01-01T00:00:00Z'
+                }]),
             })
             .mockResolvedValueOnce({
                 ok: false,

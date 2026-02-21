@@ -14,6 +14,9 @@ The backend test suite uses **pytest** with **FastAPI's `TestClient`** and an **
 | `test_export.py` | 10 | CSV export, CSV import, validation, campaign resolution |
 | `test_audit.py` | 19 | Audit logging on CRUD, filtering, user isolation |
 | `test_utm.py` | 6 | Link creation with UTM, updates, redirect with UTM, CSV export/import |
+| `test_org_policies.py` | 8 | Organization policy enforcement (privacy, edit/delete permissions) |
+| `test_organizations.py` | 9 | Organization CRUD, membership, ownership transfer, invites |
+| `test_analytics.py` | 4 | Time-series data, top referrers, geographic and device breakdowns |
 
 ## Running Tests
 
