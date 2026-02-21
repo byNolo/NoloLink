@@ -14,12 +14,12 @@ class TestUserProfile:
 
 
 class TestAccessRequests:
-    def test_request_access(self, db, unapproved_user):
+    def test_request_access(self, db, unapproved_user, test_org):
         """Unapproved user can request access."""
         from tests.conftest import _make_client
         from main import app
 
-        client = _make_client(db, unapproved_user)
+        client = _make_client(db, unapproved_user, test_org)
         resp = client.post("/api/users/request-access")
         assert resp.status_code == 200
         assert resp.json()["request_status"] == "pending"
@@ -31,7 +31,7 @@ class TestAccessRequests:
         assert resp.status_code == 400
         assert "already approved" in resp.json()["detail"].lower()
 
-    def test_request_access_already_pending(self, db, unapproved_user):
+    def test_request_access_already_pending(self, db, unapproved_user, test_org):
         """Second request while pending gets 400."""
         from tests.conftest import _make_client
         from main import app
@@ -40,7 +40,7 @@ class TestAccessRequests:
         db.add(unapproved_user)
         db.commit()
 
-        client = _make_client(db, unapproved_user)
+        client = _make_client(db, unapproved_user, test_org)
         resp = client.post("/api/users/request-access")
         assert resp.status_code == 400
         assert "already pending" in resp.json()["detail"].lower()

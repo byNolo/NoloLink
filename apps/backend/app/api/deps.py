@@ -83,3 +83,65 @@ def get_current_active_user_optional(
     if current_user and not current_user.is_active:
         return None
     return current_user
+
+
+# --- Organization Context ---
+from collections import namedtuple
+from fastapi import Request
+OrgContext = namedtuple("OrgContext", ["org", "role", "membership"])
+
+def get_current_org(
+    request: Request,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_active_user)
+) -> OrgContext:
+    """Read X-Org-Id header, validate membership, return org context.
+    
+    When the header is absent, default to the user's first org membership
+    so single-org users don't need to send it explicitly.
+    """
+    from app.crud.organization import get_org, get_membership, get_memberships_for_user
+
+    org_id_str = request.headers.get("x-org-id")
+
+    if org_id_str:
+        try:
+            org_id = int(org_id_str)
+        except ValueError:
+            raise HTTPException(status_code=400, detail="Invalid X-Org-Id")
+    else:
+        # Default to user's first org
+        memberships = get_memberships_for_user(db, user_id=current_user.id)
+        if not memberships:
+            raise HTTPException(status_code=400, detail="User has no organization membership")
+        first = memberships[0]
+        return OrgContext(org=first.organization, role=first.role, membership=first)
+
+    org = get_org(db, org_id=org_id)
+    if not org:
+        raise HTTPException(status_code=404, detail="Organization not found")
+
+    # Superusers can access any org
+    if current_user.is_superuser:
+        membership = get_membership(db, user_id=current_user.id, org_id=org_id)
+        role = membership.role if membership else "owner"
+        return OrgContext(org=org, role=role, membership=membership)
+
+    membership = get_membership(db, user_id=current_user.id, org_id=org_id)
+    if not membership:
+        raise HTTPException(status_code=403, detail="Not a member of this organization")
+
+    return OrgContext(org=org, role=membership.role, membership=membership)
+
+
+def require_org_admin(
+    org_ctx: OrgContext = Depends(get_current_org),
+    current_user: User = Depends(get_current_active_user)
+) -> OrgContext:
+    """Require admin+ role or superuser."""
+    if current_user.is_superuser:
+        return org_ctx
+    if org_ctx.role not in ("owner", "admin"):
+        raise HTTPException(status_code=403, detail="Admin or owner role required")
+    return org_ctx
+

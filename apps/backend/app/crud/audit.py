@@ -11,10 +11,12 @@ def create_audit_entry(
     target_type: str,
     target_id: int,
     details: Optional[dict] = None,
+    org_id: Optional[int] = None,
 ):
     """Create a new audit log entry."""
     entry = AuditLog(
         user_id=user_id,
+        org_id=org_id,
         action=action,
         target_type=target_type,
         target_id=target_id,
@@ -31,12 +33,15 @@ def get_audit_logs(
     user_id: Optional[int] = None,
     action: Optional[str] = None,
     target_type: Optional[str] = None,
+    org_id: Optional[int] = None,
     skip: int = 0,
     limit: int = 50,
 ):
-    """Get audit logs, optionally filtered by user, action, or target type."""
+    """Get audit logs, optionally filtered by user, action, target type, or org."""
     query = db.query(AuditLog)
 
+    if org_id is not None:
+        query = query.filter(AuditLog.org_id == org_id)
     if user_id is not None:
         query = query.filter(AuditLog.user_id == user_id)
     if action:

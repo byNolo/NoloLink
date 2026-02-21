@@ -84,6 +84,7 @@ class Link(LinkBase):
     id: int
     short_code: str
     owner_id: int
+    org_id: Optional[int] = None
     clicks: int
     created_at: datetime
     title: Optional[str] = None

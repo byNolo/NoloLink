@@ -11,6 +11,7 @@ from app.models.link import Link
 from app.models.analytics import ClickEvent
 from app.models.campaign import Campaign
 from app.models.audit import AuditLog
+from app.models.organization import Organization, OrgMembership, OrgInvite
 
 # this is the Alembic Config object, which provides
 # access to the values within the .ini file in use.

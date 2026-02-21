@@ -9,6 +9,7 @@ class AuditLog(Base):
 
     id = Column(Integer, primary_key=True, index=True)
     user_id = Column(Integer, ForeignKey("users.id"), nullable=False, index=True)
+    org_id = Column(Integer, ForeignKey("organizations.id"), nullable=True, index=True)
     action = Column(String, nullable=False, index=True)  # create, update, delete, disable, enable
     target_type = Column(String, nullable=False)  # link, campaign
     target_id = Column(Integer, nullable=False)

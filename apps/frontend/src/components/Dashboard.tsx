@@ -4,7 +4,7 @@ import { Link as RouterLink } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { fetchLinks, createLink, updateLink, deleteLink, fetchCampaigns, createCampaign, deleteCampaign, createLinksBulk, updateLinksBulk, exportLinksCSV, importLinksCSV, fetchAuditLogs } from '../lib/api';
 import type { Link, Campaign, AuditLogEntry, ImportResult } from '../lib/api';
-import AdminPanel from './AdminPanel';
+
 import Navbar from './Navbar';
 
 const TriStateToggle = ({ label, value, onChange }: { label: string, value: boolean | null, onChange: (val: boolean | null) => void }) => (
@@ -37,7 +37,7 @@ const TriStateToggle = ({ label, value, onChange }: { label: string, value: bool
 );
 
 export default function Dashboard() {
-    const { token, user, refreshProfile } = useAuth();
+    const { token, user, refreshProfile, currentOrg } = useAuth();
     const [links, setLinks] = useState<Link[]>([]);
     const [campaigns, setCampaigns] = useState<Campaign[]>([]);
 
@@ -123,7 +123,7 @@ export default function Dashboard() {
 
     // Request Access State
     const [isRequesting, setIsRequesting] = useState(false);
-    const [showAdminPanel, setShowAdminPanel] = useState(false);
+
 
     // CSV Import/Export State
     const [isExporting, setIsExporting] = useState(false);
@@ -141,12 +141,14 @@ export default function Dashboard() {
     const [isLoading, setIsLoading] = useState(true);
 
     useEffect(() => {
-        if (token && (user?.is_approved || user?.is_superuser)) {
+        if (token && currentOrg && (user?.is_approved || user?.is_superuser)) {
             loadData();
+        } else if (!currentOrg) {
+            // Org not loaded yet, keep showing loading
         } else {
             setIsLoading(false);
         }
-    }, [token, user?.is_approved, user?.is_superuser]);
+    }, [token, user?.is_approved, user?.is_superuser, currentOrg]);
 
     async function loadData() {
         try {
@@ -170,12 +172,14 @@ export default function Dashboard() {
     }
 
     useEffect(() => {
-        if (token && (user?.is_approved || user?.is_superuser)) {
+        if (token && currentOrg && (user?.is_approved || user?.is_superuser)) {
             loadData();
+        } else if (!currentOrg) {
+            // Org not loaded yet, keep showing loading
         } else {
             setIsLoading(false);
         }
-    }, [token, user?.is_approved, user?.is_superuser, searchQuery, filterCampaignId, filterStatus]);
+    }, [token, user?.is_approved, user?.is_superuser, currentOrg, searchQuery, filterCampaignId, filterStatus]);
 
     async function handleRequestAccess() {
         if (!token) return;
@@ -566,15 +570,9 @@ export default function Dashboard() {
 
     return (
         <div className="min-h-screen bg-[#111] text-gray-100 font-sans">
-            <Navbar onToggleAdmin={() => setShowAdminPanel(!showAdminPanel)} />
+            <Navbar />
 
             <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-
-                {showAdminPanel && user?.is_superuser ? (
-                    <div className="mb-8">
-                        <AdminPanel />
-                    </div>
-                ) : null}
 
                 <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
                     {/* Left Column: Campaigns & Create Link */}

@@ -10,6 +10,7 @@ from sqlalchemy.orm import Session
 from app.db.session import get_db
 from app.crud import link as crud_link
 from app.api import deps
+from app.api.deps import OrgContext
 from app.models.user import User
 from app.models.link import Link
 from app.models.campaign import Campaign
@@ -27,16 +28,21 @@ CSV_COLUMNS = [
 @router.get("/csv")
 def export_links_csv(
     db: Session = Depends(get_db),
-    current_user: User = Depends(deps.get_current_active_user)
+    current_user: User = Depends(deps.get_current_active_user),
+    org_ctx: OrgContext = Depends(deps.get_current_org)
 ):
-    """Export all of the current user's links as a CSV file."""
-    links = db.query(Link).filter(
-        Link.owner_id == current_user.id,
+    """Export all links in the current org as a CSV file."""
+    query = db.query(Link).filter(
+        Link.org_id == org_ctx.org.id,
         Link.is_deleted == False
-    ).order_by(Link.created_at.desc()).all()
+    )
+    # Members only see their own
+    if org_ctx.role not in ("owner", "admin") and not current_user.is_superuser:
+        query = query.filter(Link.owner_id == current_user.id)
+    links = query.order_by(Link.created_at.desc()).all()
 
     # Build a campaign ID -> name lookup
-    campaigns = db.query(Campaign).filter(Campaign.owner_id == current_user.id).all()
+    campaigns = db.query(Campaign).filter(Campaign.org_id == org_ctx.org.id).all()
     campaign_map = {c.id: c.name for c in campaigns}
 
     output = io.StringIO()
@@ -79,7 +85,8 @@ def export_links_csv(
 def import_links_csv(
     file: UploadFile = File(...),
     db: Session = Depends(get_db),
-    current_user: User = Depends(deps.get_current_active_user)
+    current_user: User = Depends(deps.get_current_active_user),
+    org_ctx: OrgContext = Depends(deps.get_current_org)
 ):
     """Import links from a CSV file. Skips rows with duplicate short_codes."""
     if not current_user.is_approved and not current_user.is_superuser:
@@ -95,8 +102,8 @@ def import_links_csv(
 
     reader = csv.DictReader(io.StringIO(content))
 
-    # Build campaign name -> id lookup for this user
-    campaigns = db.query(Campaign).filter(Campaign.owner_id == current_user.id).all()
+    # Build campaign name -> id lookup for this org
+    campaigns = db.query(Campaign).filter(Campaign.org_id == org_ctx.org.id).all()
     campaign_name_map = {c.name.lower(): c.id for c in campaigns}
 
     created = 0
@@ -170,7 +177,7 @@ def import_links_csv(
             utm_content=utm_content,
         )
 
-        db_link = crud_link.create_link(db=db, link=link_data, owner_id=current_user.id)
+        db_link = crud_link.create_link(db=db, link=link_data, owner_id=current_user.id, org_id=org_ctx.org.id)
         if db_link:
             created += 1
         else:

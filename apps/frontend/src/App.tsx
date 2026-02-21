@@ -9,6 +9,9 @@ import ErrorPage from './pages/ErrorPage';
 import StatsPage from './pages/StatsPage';
 import TermsOfService from './pages/TermsOfService';
 import PrivacyPolicy from './pages/PrivacyPolicy';
+import OrgSettingsPage from './pages/OrgSettingsPage';
+import SuperAdminPage from './pages/SuperAdminPage';
+import AcceptInvitePage from './pages/AcceptInvitePage';
 
 const Home = () => {
   const { login, isAuthenticated } = useAuth();
@@ -58,6 +61,9 @@ export default function App() {
           <Route path="/" element={<Home />} />
           <Route path="/verify/:shortCode" element={<VerifyLinkPage />} />
           <Route path="/stats/:shortCode" element={<StatsPage />} />
+          <Route path="/org/settings" element={<OrgSettingsPage />} />
+          <Route path="/admin" element={<SuperAdminPage />} />
+          <Route path="/invite/:inviteToken" element={<AcceptInvitePage />} />
           <Route path="/tos" element={<TermsOfService />} />
           <Route path="/privacy" element={<PrivacyPolicy />} />
           <Route path="/error" element={<ErrorPage />} />

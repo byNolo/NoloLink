@@ -202,7 +202,7 @@ class TestLinkStats:
 
 
 class TestOwnershipIsolation:
-    def test_link_ownership_isolation(self, db, test_user, other_user):
+    def test_link_ownership_isolation(self, db, test_user, other_user, test_org):
         create_test_link(db, owner_id=test_user.id, short_code="mine")
         create_test_link(db, owner_id=other_user.id, short_code="theirs")
 
@@ -210,17 +210,18 @@ class TestOwnershipIsolation:
         from main import app
 
         # Check as test_user
-        c1 = _make_client(db, test_user)
+        c1 = _make_client(db, test_user, test_org)
         resp1 = c1.get("/api/links/")
         codes1 = [l["short_code"] for l in resp1.json()]
         assert "mine" in codes1
         assert "theirs" not in codes1
 
         # Check as other_user
-        c2 = _make_client(db, other_user)
+        c2 = _make_client(db, other_user, test_org)
         resp2 = c2.get("/api/links/")
         codes2 = [l["short_code"] for l in resp2.json()]
         assert "theirs" in codes2
         assert "mine" not in codes2
 
         app.dependency_overrides.clear()
+

@@ -5,11 +5,16 @@ from app.schemas.campaign import CampaignCreate, CampaignUpdate
 def get_campaign(db: Session, campaign_id: int):
     return db.query(Campaign).filter(Campaign.id == campaign_id).first()
 
-def get_campaigns(db: Session, owner_id: int, skip: int = 0, limit: int = 100):
-    return db.query(Campaign).filter(Campaign.owner_id == owner_id).offset(skip).limit(limit).all()
+def get_campaigns(db: Session, owner_id: int = None, org_id: int = None, skip: int = 0, limit: int = 100):
+    query = db.query(Campaign)
+    if org_id:
+        query = query.filter(Campaign.org_id == org_id)
+    if owner_id:
+        query = query.filter(Campaign.owner_id == owner_id)
+    return query.offset(skip).limit(limit).all()
 
-def create_campaign(db: Session, campaign: CampaignCreate, owner_id: int):
-    db_campaign = Campaign(**campaign.model_dump(), owner_id=owner_id)
+def create_campaign(db: Session, campaign: CampaignCreate, owner_id: int, org_id: int = None):
+    db_campaign = Campaign(**campaign.model_dump(), owner_id=owner_id, org_id=org_id)
     db.add(db_campaign)
     db.commit()
     db.refresh(db_campaign)

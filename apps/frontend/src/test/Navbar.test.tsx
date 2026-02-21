@@ -8,7 +8,7 @@ import Navbar from '../components/Navbar';
 const mockFetch = vi.fn();
 globalThis.fetch = mockFetch;
 
-function renderNavbar(opts: { isSuperuser?: boolean; onToggleAdmin?: () => void; path?: string } = {}) {
+function renderNavbar(opts: { isSuperuser?: boolean; path?: string } = {}) {
     const user = {
         id: 1,
         username: 'testuser',
@@ -31,7 +31,7 @@ function renderNavbar(opts: { isSuperuser?: boolean; onToggleAdmin?: () => void;
     return render(
         <AuthProvider>
             <MemoryRouter initialEntries={[opts.path || '/']}>
-                <Navbar onToggleAdmin={opts.onToggleAdmin} />
+                <Navbar />
             </MemoryRouter>
         </AuthProvider>
     );
@@ -51,7 +51,6 @@ describe('Navbar', () => {
 
     it('displays the username when logged in', async () => {
         renderNavbar();
-        // Wait for the AuthProvider to resolve
         const username = await screen.findByText('testuser');
         expect(username).toBeInTheDocument();
     });
@@ -62,16 +61,15 @@ describe('Navbar', () => {
         expect(badge).toBeInTheDocument();
     });
 
-    it('shows Admin Panel button for superusers', async () => {
-        const toggleFn = vi.fn();
-        renderNavbar({ isSuperuser: true, onToggleAdmin: toggleFn });
-        const btn = await screen.findByText('Admin Panel');
-        expect(btn).toBeInTheDocument();
+    it('shows Admin link for superusers', async () => {
+        renderNavbar({ isSuperuser: true });
+        const link = await screen.findByText('Admin');
+        expect(link).toBeInTheDocument();
     });
 
     it('does not show superuser badge for regular users', async () => {
         renderNavbar({ isSuperuser: false });
-        await screen.findByText('testuser'); // Wait for auth
+        await screen.findByText('testuser');
         expect(screen.queryByText('Superuser')).not.toBeInTheDocument();
     });
 

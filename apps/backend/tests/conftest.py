@@ -5,6 +5,7 @@ Provides:
 - In-memory SQLite test database (isolated from production)
 - FastAPI TestClient with auth dependency overrides
 - Pre-created test users (regular + superuser)
+- Pre-created test organization with memberships
 - Helper factories for links and campaigns
 """
 
@@ -20,12 +21,15 @@ from app.api.deps import (
     get_current_active_user,
     get_current_active_superuser,
     get_current_active_user_optional,
+    get_current_org,
+    OrgContext,
 )
 from app.models.user import User
 from app.models.link import Link
 from app.models.campaign import Campaign
 from app.models.analytics import ClickEvent
 from app.models.audit import AuditLog
+from app.models.organization import Organization, OrgMembership, OrgInvite
 from main import app
 
 # ---------------------------------------------------------------------------
@@ -61,11 +65,25 @@ def db():
 
 
 # ---------------------------------------------------------------------------
+# Organization fixtures
+# ---------------------------------------------------------------------------
+
+@pytest.fixture()
+def test_org(db: Session) -> Organization:
+    """Create a test organization."""
+    org = Organization(name="Test Org", slug="test-org", plan="free", is_active=True)
+    db.add(org)
+    db.commit()
+    db.refresh(org)
+    return org
+
+
+# ---------------------------------------------------------------------------
 # User fixtures
 # ---------------------------------------------------------------------------
 
 @pytest.fixture()
-def test_user(db: Session) -> User:
+def test_user(db: Session, test_org: Organization) -> User:
     """Create a regular approved user for testing."""
     user = User(
         keyn_id="test-keyn-001",
@@ -80,11 +98,15 @@ def test_user(db: Session) -> User:
     db.add(user)
     db.commit()
     db.refresh(user)
+    # Add membership
+    membership = OrgMembership(user_id=user.id, org_id=test_org.id, role="member")
+    db.add(membership)
+    db.commit()
     return user
 
 
 @pytest.fixture()
-def test_superuser(db: Session) -> User:
+def test_superuser(db: Session, test_org: Organization) -> User:
     """Create a superuser for testing admin endpoints."""
     user = User(
         keyn_id="test-keyn-admin",
@@ -99,11 +121,15 @@ def test_superuser(db: Session) -> User:
     db.add(user)
     db.commit()
     db.refresh(user)
+    # Add as org owner
+    membership = OrgMembership(user_id=user.id, org_id=test_org.id, role="owner")
+    db.add(membership)
+    db.commit()
     return user
 
 
 @pytest.fixture()
-def other_user(db: Session) -> User:
+def other_user(db: Session, test_org: Organization) -> User:
     """Create a second regular user for ownership isolation tests."""
     user = User(
         keyn_id="test-keyn-002",
@@ -118,11 +144,14 @@ def other_user(db: Session) -> User:
     db.add(user)
     db.commit()
     db.refresh(user)
+    membership = OrgMembership(user_id=user.id, org_id=test_org.id, role="member")
+    db.add(membership)
+    db.commit()
     return user
 
 
 @pytest.fixture()
-def unapproved_user(db: Session) -> User:
+def unapproved_user(db: Session, test_org: Organization) -> User:
     """Create an unapproved user for access-request tests."""
     user = User(
         keyn_id="test-keyn-unapproved",
@@ -137,6 +166,9 @@ def unapproved_user(db: Session) -> User:
     db.add(user)
     db.commit()
     db.refresh(user)
+    membership = OrgMembership(user_id=user.id, org_id=test_org.id, role="member")
+    db.add(membership)
+    db.commit()
     return user
 
 
@@ -144,8 +176,17 @@ def unapproved_user(db: Session) -> User:
 # Client fixtures (with auth dependency overrides)
 # ---------------------------------------------------------------------------
 
-def _make_client(db: Session, user: User) -> TestClient:
-    """Build a TestClient with dependency overrides for the given user."""
+def _make_client(db: Session, user: User, org: Organization) -> TestClient:
+    """Build a TestClient with dependency overrides for the given user and org."""
+
+    # Get membership for the org context
+    membership = db.query(OrgMembership).filter(
+        OrgMembership.user_id == user.id,
+        OrgMembership.org_id == org.id
+    ).first()
+    role = membership.role if membership else ("owner" if user.is_superuser else "member")
+
+    org_ctx = OrgContext(org=org, role=role, membership=membership)
 
     def _override_get_db():
         yield db
@@ -165,36 +206,40 @@ def _make_client(db: Session, user: User) -> TestClient:
     def _override_get_current_active_user_optional():
         return user
 
+    def _override_get_current_org():
+        return org_ctx
+
     app.dependency_overrides[get_db] = _override_get_db
     app.dependency_overrides[get_current_user] = _override_get_current_user
     app.dependency_overrides[get_current_active_user] = _override_get_current_active_user
     app.dependency_overrides[get_current_active_superuser] = _override_get_current_active_superuser
     app.dependency_overrides[get_current_active_user_optional] = _override_get_current_active_user_optional
+    app.dependency_overrides[get_current_org] = _override_get_current_org
 
     client = TestClient(app)
     return client
 
 
 @pytest.fixture()
-def client(db: Session, test_user: User) -> TestClient:
+def client(db: Session, test_user: User, test_org: Organization) -> TestClient:
     """TestClient authenticated as a regular approved user."""
-    c = _make_client(db, test_user)
+    c = _make_client(db, test_user, test_org)
     yield c
     app.dependency_overrides.clear()
 
 
 @pytest.fixture()
-def admin_client(db: Session, test_superuser: User) -> TestClient:
+def admin_client(db: Session, test_superuser: User, test_org: Organization) -> TestClient:
     """TestClient authenticated as a superuser."""
-    c = _make_client(db, test_superuser)
+    c = _make_client(db, test_superuser, test_org)
     yield c
     app.dependency_overrides.clear()
 
 
 @pytest.fixture()
-def other_client(db: Session, other_user: User) -> TestClient:
+def other_client(db: Session, other_user: User, test_org: Organization) -> TestClient:
     """TestClient authenticated as another regular user."""
-    c = _make_client(db, other_user)
+    c = _make_client(db, other_user, test_org)
     yield c
     app.dependency_overrides.clear()
 
@@ -234,6 +279,7 @@ def create_test_link(
     tags: str = None,
     title: str = None,
     track_activity: bool = True,
+    org_id: int = None,
     utm_source: str = None,
     utm_medium: str = None,
     utm_campaign: str = None,
@@ -241,10 +287,16 @@ def create_test_link(
     utm_content: str = None,
 ) -> Link:
     """Directly insert a Link into the test DB."""
+    # Auto-detect org_id from first org if not specified
+    if org_id is None:
+        first_org = db.query(Organization).first()
+        if first_org:
+            org_id = first_org.id
     link = Link(
         short_code=short_code,
         original_url=original_url,
         owner_id=owner_id,
+        org_id=org_id,
         is_active=is_active,
         password_hash=password_hash,
         require_login=require_login,
@@ -271,10 +323,17 @@ def create_test_campaign(
     owner_id: int,
     name: str = "Test Campaign",
     color: str = "#FF5733",
+    org_id: int = None,
 ) -> Campaign:
     """Directly insert a Campaign into the test DB."""
-    campaign = Campaign(name=name, color=color, owner_id=owner_id)
+    # Auto-detect org_id from first org if not specified
+    if org_id is None:
+        first_org = db.query(Organization).first()
+        if first_org:
+            org_id = first_org.id
+    campaign = Campaign(name=name, color=color, owner_id=owner_id, org_id=org_id)
     db.add(campaign)
     db.commit()
     db.refresh(campaign)
     return campaign
+

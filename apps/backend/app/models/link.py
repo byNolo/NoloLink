@@ -10,6 +10,7 @@ class Link(Base):
     short_code = Column(String, unique=True, index=True, nullable=False)
     original_url = Column(String, nullable=False)
     owner_id = Column(Integer, ForeignKey("users.id"), nullable=False)
+    org_id = Column(Integer, ForeignKey("organizations.id"), nullable=True, index=True)
     is_active = Column(Boolean, default=True)
     is_deleted = Column(Boolean, default=False)
     track_activity = Column(Boolean, default=True) # New: Enable/Disable detailed tracking
@@ -39,6 +40,7 @@ class Link(Base):
 
 
     # Relationships
-    owner = relationship("User", backref="links") # simplistic backref
+    owner = relationship("User", backref="links")
+    organization = relationship("Organization", back_populates="links")
     campaign = relationship("Campaign", back_populates="links")
     events = relationship("ClickEvent", back_populates="link", cascade="all, delete-orphan")

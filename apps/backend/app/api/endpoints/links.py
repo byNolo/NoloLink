@@ -7,6 +7,7 @@ from app.crud import link as crud_link
 from app.crud import audit as crud_audit
 from app.schemas import link as link_schema
 from app.api import deps
+from app.api.deps import OrgContext
 from app.models.user import User
 
 router = APIRouter()
@@ -19,25 +20,31 @@ def read_links(
     campaign_id: int = None,
     is_active: bool = None,
     db: Session = Depends(get_db), 
-    current_user: User = Depends(deps.get_current_active_user)
+    current_user: User = Depends(deps.get_current_active_user),
+    org_ctx: OrgContext = Depends(deps.get_current_org)
 ):
     filters = {
         "search": search,
         "campaign_id": campaign_id,
         "is_active": is_active
     }
-    return crud_link.get_links(db, owner_id=current_user.id, skip=skip, limit=limit, filters=filters)
+    # Admins/owners see all org links, members see only their own
+    if org_ctx.role in ("owner", "admin") or current_user.is_superuser:
+        return crud_link.get_links(db, org_id=org_ctx.org.id, skip=skip, limit=limit, filters=filters)
+    else:
+        return crud_link.get_links(db, org_id=org_ctx.org.id, owner_id=current_user.id, skip=skip, limit=limit, filters=filters)
 
 @router.post("/", response_model=link_schema.Link)
 def create_link(
     link: link_schema.LinkCreate, 
     db: Session = Depends(get_db), 
-    current_user: User = Depends(deps.get_current_active_user)
+    current_user: User = Depends(deps.get_current_active_user),
+    org_ctx: OrgContext = Depends(deps.get_current_org)
 ):
     if not current_user.is_approved and not current_user.is_superuser:
         raise HTTPException(status_code=403, detail="User not approved to create links")
 
-    db_link = crud_link.create_link(db=db, link=link, owner_id=current_user.id)
+    db_link = crud_link.create_link(db=db, link=link, owner_id=current_user.id, org_id=org_ctx.org.id)
     if not db_link:
         raise HTTPException(status_code=400, detail="Short code already exists")
     
@@ -47,7 +54,8 @@ def create_link(
         details={
             "short_code": db_link.short_code,
             "summary": f"Created link /{db_link.short_code} → {db_link.original_url[:80]}"
-        }
+        },
+        org_id=org_ctx.org.id
     )
     return db_link
 
@@ -55,23 +63,27 @@ def create_link(
 def create_links_bulk(
     links: List[link_schema.LinkCreate],
     db: Session = Depends(get_db),
-    current_user: User = Depends(deps.get_current_active_user)
+    current_user: User = Depends(deps.get_current_active_user),
+    org_ctx: OrgContext = Depends(deps.get_current_org)
 ):
     if not current_user.is_approved and not current_user.is_superuser:
         raise HTTPException(status_code=403, detail="User not approved to create links")
     
-    return crud_link.create_links_bulk(db=db, links=links, owner_id=current_user.id)
+    return crud_link.create_links_bulk(db=db, links=links, owner_id=current_user.id, org_id=org_ctx.org.id)
 
 @router.put("/bulk", response_model=List[link_schema.Link])
 def update_links_bulk(
     bulk_update: link_schema.LinkBulkUpdate,
     db: Session = Depends(get_db),
-    current_user: User = Depends(deps.get_current_active_user)
+    current_user: User = Depends(deps.get_current_active_user),
+    org_ctx: OrgContext = Depends(deps.get_current_org)
 ):
     if not current_user.is_approved and not current_user.is_superuser:
         raise HTTPException(status_code=403, detail="User not approved to update links")
     
-    updated = crud_link.update_links_bulk(db=db, bulk_update=bulk_update, owner_id=current_user.id)
+    # Members can only bulk-update their own links
+    owner_filter = None if (org_ctx.role in ("owner", "admin") or current_user.is_superuser) else current_user.id
+    updated = crud_link.update_links_bulk(db=db, bulk_update=bulk_update, owner_id=owner_filter, org_id=org_ctx.org.id)
     
     # Build summary of what fields were changed
     changed_fields = []
@@ -89,7 +101,8 @@ def update_links_bulk(
                 "short_code": link.short_code,
                 "bulk_update": True,
                 "summary": f"Bulk edit /{link.short_code}: updated {fields_str}"
-            }
+            },
+            org_id=org_ctx.org.id
         )
     return updated
 
@@ -98,7 +111,8 @@ def update_link(
     link_id: int,
     link_in: link_schema.LinkCreate,
     db: Session = Depends(get_db),
-    current_user: User = Depends(deps.get_current_active_user)
+    current_user: User = Depends(deps.get_current_active_user),
+    org_ctx: OrgContext = Depends(deps.get_current_org)
 ):
     if not current_user.is_approved and not current_user.is_superuser:
         raise HTTPException(status_code=403, detail="User not approved to update links")
@@ -106,14 +120,17 @@ def update_link(
     link = crud_link.get_link(db, link_id=link_id)
     if not link:
         raise HTTPException(status_code=404, detail="Link not found")
-    if link.owner_id != current_user.id and not current_user.is_superuser:
+    if link.org_id != org_ctx.org.id:
+        raise HTTPException(status_code=404, detail="Link not found")
+    # Members can only edit their own links
+    if link.owner_id != current_user.id and not current_user.is_superuser and org_ctx.role not in ("owner", "admin"):
         raise HTTPException(status_code=403, detail="Not enough permissions")
     
     updated_link = crud_link.update_link(db=db, db_link=link, link_update=link_in)
     if not updated_link:
         raise HTTPException(status_code=400, detail="Short code already exists")
     
-    # Build change summary by comparing old vs new
+    # Build change summary
     changes = []
     if link.original_url != updated_link.original_url:
         changes.append(f"url → {updated_link.original_url[:60]}")
@@ -138,7 +155,8 @@ def update_link(
     crud_audit.create_audit_entry(
         db, user_id=current_user.id, action="update",
         target_type="link", target_id=updated_link.id,
-        details={"short_code": updated_link.short_code, "summary": summary}
+        details={"short_code": updated_link.short_code, "summary": summary},
+        org_id=org_ctx.org.id
     )
     return updated_link
 
@@ -146,12 +164,15 @@ def update_link(
 def delete_link(
     link_id: int,
     db: Session = Depends(get_db),
-    current_user: User = Depends(deps.get_current_active_user)
+    current_user: User = Depends(deps.get_current_active_user),
+    org_ctx: OrgContext = Depends(deps.get_current_org)
 ):
     link = crud_link.get_link(db, link_id=link_id)
     if not link:
         raise HTTPException(status_code=404, detail="Link not found")
-    if link.owner_id != current_user.id and not current_user.is_superuser:
+    if link.org_id != org_ctx.org.id:
+        raise HTTPException(status_code=404, detail="Link not found")
+    if link.owner_id != current_user.id and not current_user.is_superuser and org_ctx.role not in ("owner", "admin"):
         raise HTTPException(status_code=403, detail="Not enough permissions")
     
     crud_audit.create_audit_entry(
@@ -160,7 +181,8 @@ def delete_link(
         details={
             "short_code": link.short_code,
             "summary": f"Deleted /{link.short_code} → {link.original_url[:80]}"
-        }
+        },
+        org_id=org_ctx.org.id
     )
     crud_link.delete_link(db, db_link=link)
     return link
@@ -170,14 +192,19 @@ def delete_link(
 def get_link_stats(
     short_code: str,
     db: Session = Depends(get_db),
-    current_user: User = Depends(deps.get_current_active_user)
+    current_user: User = Depends(deps.get_current_active_user),
+    org_ctx: OrgContext = Depends(deps.get_current_org)
 ):
     link = crud_link.get_link_by_code(db, short_code=short_code)
     if not link:
         raise HTTPException(status_code=404, detail="Link not found")
     
-    # Permission check: Owner or Superuser
-    if link.owner_id != current_user.id and not current_user.is_superuser:
+    # Permission: must be in the same org (or superuser)
+    if link.org_id != org_ctx.org.id and not current_user.is_superuser:
+        raise HTTPException(status_code=403, detail="Not authorized to view stats for this link")
+    
+    # Members can only view their own link stats
+    if link.owner_id != current_user.id and not current_user.is_superuser and org_ctx.role not in ("owner", "admin"):
         raise HTTPException(status_code=403, detail="Not authorized to view stats for this link")
     
     # Aggregate Stats

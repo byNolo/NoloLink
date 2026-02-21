@@ -41,12 +41,17 @@ def get_link_by_code(db: Session, short_code: str):
 
 def get_links(
     db: Session, 
-    owner_id: int, 
+    org_id: int = None,
+    owner_id: int = None, 
     skip: int = 0, 
     limit: int = 100, 
     filters: dict = None
 ):
-    query = db.query(Link).filter(Link.owner_id == owner_id, Link.is_deleted == False)
+    query = db.query(Link).filter(Link.is_deleted == False)
+    if org_id:
+        query = query.filter(Link.org_id == org_id)
+    if owner_id:
+        query = query.filter(Link.owner_id == owner_id)
     
     if filters:
         if filters.get("campaign_id"):
@@ -64,7 +69,7 @@ def get_links(
 
     return query.order_by(Link.created_at.desc()).offset(skip).limit(limit).all()
 
-def create_link(db: Session, link: LinkCreate, owner_id: int):
+def create_link(db: Session, link: LinkCreate, owner_id: int, org_id: int = None):
     code = link.short_code
     if code:
         # Check if code exists
@@ -86,6 +91,7 @@ def create_link(db: Session, link: LinkCreate, owner_id: int):
         short_code=code,
         original_url=str(link.original_url),
         owner_id=owner_id,
+        org_id=org_id,
         title=link.title,
         tags=link.tags,
         redirect_type=link.redirect_type or 302,
@@ -157,7 +163,7 @@ def increment_clicks(db: Session, db_link: Link):
     db.add(db_link)
     db.commit()
 
-def create_links_bulk(db: Session, links: list[LinkCreate], owner_id: int):
+def create_links_bulk(db: Session, links: list[LinkCreate], owner_id: int, org_id: int = None):
     created_links = []
     for link_data in links:
         code = link_data.short_code
@@ -178,6 +184,7 @@ def create_links_bulk(db: Session, links: list[LinkCreate], owner_id: int):
             short_code=code,
             original_url=str(link_data.original_url),
             owner_id=owner_id,
+            org_id=org_id,
             title=link_data.title,
             tags=link_data.tags,
             redirect_type=link_data.redirect_type or 302,
@@ -204,13 +211,17 @@ def create_links_bulk(db: Session, links: list[LinkCreate], owner_id: int):
 
 from app.schemas.link import LinkBulkUpdate
 
-def update_links_bulk(db: Session, bulk_update: LinkBulkUpdate, owner_id: int):
-    # Fetch all links belonging to owner that are in the list
-    links_to_update = db.query(Link).filter(
+def update_links_bulk(db: Session, bulk_update: LinkBulkUpdate, owner_id: int = None, org_id: int = None):
+    # Fetch all links in the given org that are in the list
+    query = db.query(Link).filter(
         Link.id.in_(bulk_update.link_ids),
-        Link.owner_id == owner_id,
         Link.is_deleted == False
-    ).all()
+    )
+    if org_id:
+        query = query.filter(Link.org_id == org_id)
+    if owner_id:
+        query = query.filter(Link.owner_id == owner_id)
+    links_to_update = query.all()
 
     hashed_password = None
     if bulk_update.password:

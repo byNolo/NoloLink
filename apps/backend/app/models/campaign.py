@@ -10,8 +10,10 @@ class Campaign(Base):
     name = Column(String, nullable=False)
     color = Column(String, nullable=True) # Hex color code
     owner_id = Column(Integer, ForeignKey("users.id"), nullable=False)
+    org_id = Column(Integer, ForeignKey("organizations.id"), nullable=True, index=True)
     created_at = Column(DateTime(timezone=True), server_default=func.now())
 
     # Relationships
     owner = relationship("User", backref="campaigns")
+    organization = relationship("Organization", back_populates="campaigns")
     links = relationship("Link", back_populates="campaign")

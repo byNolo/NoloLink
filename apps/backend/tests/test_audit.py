@@ -105,27 +105,27 @@ class TestAuditFiltering:
 
 
 class TestAuditIsolation:
-    def test_audit_user_isolation(self, db, test_user, other_user):
+    def test_audit_user_isolation(self, db, test_user, other_user, test_org):
         """Regular users should only see their own audit entries."""
         from tests.conftest import _make_client
         from main import app
 
         # Create a link as test_user
-        c1 = _make_client(db, test_user)
+        c1 = _make_client(db, test_user, test_org)
         c1.post("/api/links/", json={
             "original_url": "https://mine.com",
             "short_code": "myaudit",
         })
 
         # Create a link as other_user
-        c2 = _make_client(db, other_user)
+        c2 = _make_client(db, other_user, test_org)
         c2.post("/api/links/", json={
             "original_url": "https://theirs.com",
             "short_code": "theiraudit",
         })
 
         # Check as test_user — should only see their entries
-        c1 = _make_client(db, test_user)
+        c1 = _make_client(db, test_user, test_org)
         resp = c1.get("/api/audit/")
         assert resp.status_code == 200
         for entry in resp.json():
@@ -134,20 +134,20 @@ class TestAuditIsolation:
 
         app.dependency_overrides.clear()
 
-    def test_audit_admin_sees_all(self, db, test_user, test_superuser):
+    def test_audit_admin_sees_all(self, db, test_user, test_superuser, test_org):
         """Admin should see all users' audit entries."""
         from tests.conftest import _make_client
         from main import app
 
         # Create as regular user
-        c1 = _make_client(db, test_user)
+        c1 = _make_client(db, test_user, test_org)
         c1.post("/api/links/", json={
             "original_url": "https://visible.com",
             "short_code": "adminvis",
         })
 
         # Check as admin
-        c2 = _make_client(db, test_superuser)
+        c2 = _make_client(db, test_superuser, test_org)
         resp = c2.get("/api/audit/")
         assert resp.status_code == 200
         assert len(resp.json()) >= 1
