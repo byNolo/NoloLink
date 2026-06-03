@@ -221,8 +221,10 @@ def get_link_stats(
         raise HTTPException(status_code=403, detail="Not authorized to view stats for this link")
     
     # Aggregate Stats
+    from collections import Counter
     from sqlalchemy import func
     from app.models.analytics import ClickEvent
+    from app.utils.analytics import is_crawler_user_agent
     from datetime import datetime, timedelta
 
     # 1. Clicks Over Time (Last 30 Days)
@@ -236,6 +238,11 @@ def get_link_stats(
     ).group_by('date').all()
     
     link.clicks_over_time = [{"date": str(row.date), "count": row.count} for row in clicks_over_time_query]
+
+    total_tracked_events = db.query(func.count(ClickEvent.id)).filter(
+        ClickEvent.link_id == link.id
+    ).scalar() or 0
+    link.clicks = max(link.clicks or 0, total_tracked_events)
 
     # 2. Top Countries
     top_countries_query = db.query(
@@ -257,14 +264,36 @@ def get_link_stats(
     
     link.top_referrers = [{"referrer": row.referrer or "Direct", "count": row.count} for row in top_referrers_query]
 
-    # 4. Device Breakdown
-    device_breakdown_query = db.query(
+    event_rows = db.query(
         ClickEvent.device_type,
-        func.count(ClickEvent.id).label('count')
+        ClickEvent.browser,
+        ClickEvent.os,
+        ClickEvent.user_agent,
     ).filter(
         ClickEvent.link_id == link.id
-    ).group_by(ClickEvent.device_type).all()
-    
-    link.device_breakdown = [{"device": row.device_type or "Unknown", "count": row.count} for row in device_breakdown_query]
+    ).all()
+
+    device_counts = Counter()
+    browser_counts = Counter()
+    os_counts = Counter()
+    visitor_type_counts = Counter()
+
+    for event in event_rows:
+        is_crawler = (
+            event.device_type == "crawler" or
+            is_crawler_user_agent(event.user_agent or event.browser or "")
+        )
+        device = "crawler" if is_crawler else (event.device_type or "unknown")
+        visitor_type = "Crawler previews" if is_crawler else "Human clicks"
+
+        device_counts[device] += 1
+        browser_counts[event.browser or "Unknown"] += 1
+        os_counts[event.os or "Unknown"] += 1
+        visitor_type_counts[visitor_type] += 1
+
+    link.device_breakdown = [{"device": key, "count": count} for key, count in device_counts.most_common()]
+    link.browser_breakdown = [{"browser": key, "count": count} for key, count in browser_counts.most_common(10)]
+    link.os_breakdown = [{"os": key, "count": count} for key, count in os_counts.most_common(10)]
+    link.visitor_type_breakdown = [{"type": key, "count": count} for key, count in visitor_type_counts.most_common()]
         
     return link

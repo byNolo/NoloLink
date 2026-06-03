@@ -64,7 +64,10 @@ describe('StatsPage', () => {
                     clicks_over_time: [{ date: '2026-01-15', count: 10 }],
                     top_countries: [{ country: 'US', count: 20 }],
                     top_referrers: [{ referrer: 'Direct', count: 30 }],
-                    device_breakdown: [{ device: 'Desktop', count: 25 }],
+                    device_breakdown: [{ device: 'mobile', count: 25 }, { device: 'crawler', count: 2 }],
+                    browser_breakdown: [{ browser: 'Mobile Safari', count: 25 }, { browser: 'Discordbot', count: 2 }],
+                    os_breakdown: [{ os: 'iOS', count: 25 }, { os: 'Other', count: 2 }],
+                    visitor_type_breakdown: [{ type: 'Human clicks', count: 25 }, { type: 'Crawler previews', count: 2 }],
                     track_activity: true,
                 }),
             });
@@ -74,6 +77,10 @@ describe('StatsPage', () => {
         // Wait for stats to load and display
         expect(await screen.findByText('42')).toBeInTheDocument();
         expect(screen.getByText(/abc123/)).toBeInTheDocument();
+        expect(screen.getByText('Human Clicks')).toBeInTheDocument();
+        expect(screen.getByText('Crawler Previews')).toBeInTheDocument();
+        expect(screen.getByText('Mobile Safari')).toBeInTheDocument();
+        expect(screen.getByText('Operating Systems')).toBeInTheDocument();
     });
 
     it('shows error state for not found link', async () => {

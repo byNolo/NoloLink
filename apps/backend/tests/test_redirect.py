@@ -80,9 +80,28 @@ class TestRedirectStats:
         client.get("/cnt", headers={"referer": "https://www.google.com/search?q=test"}, follow_redirects=False)
         
         # A ClickEvent should have been created with normalized data
+        db.refresh(link)
+        assert link.clicks == 1
         event = db.query(ClickEvent).filter(ClickEvent.link_id == link.id).order_by(ClickEvent.id.desc()).first()
         assert event is not None
         assert event.referrer == "google.com"
         assert event.country_code == "CA"
         assert event.device_type == "desktop"  # Default for TestClient UA
 
+    @patch("app.utils.analytics.get_country_code")
+    def test_discord_link_preview_is_tracked_as_crawler(self, mock_geo, client, db, test_user):
+        mock_geo.return_value = "US"
+        link = create_test_link(db, owner_id=test_user.id, short_code="discord",
+                                original_url="https://discord.example.com")
+
+        client.get(
+            "/discord",
+            headers={"user-agent": "Mozilla/5.0 (compatible; Discordbot/2.0; +https://discordapp.com)"},
+            follow_redirects=False,
+        )
+
+        db.refresh(link)
+        event = db.query(ClickEvent).filter(ClickEvent.link_id == link.id).one()
+        assert link.clicks == 1
+        assert event.device_type == "crawler"
+        assert event.browser == "Discordbot"

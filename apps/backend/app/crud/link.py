@@ -163,8 +163,10 @@ def delete_link(db: Session, db_link: Link):
     db.commit()
 
 def increment_clicks(db: Session, db_link: Link):
+    db_link.clicks = (db_link.clicks or 0) + 1
     db.add(db_link)
     db.commit()
+    db.refresh(db_link)
 
 def create_links_bulk(db: Session, links: list[LinkCreate], owner_id: int, org_id: int = None):
     created_links = []

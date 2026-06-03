@@ -90,6 +90,9 @@ class Link(LinkBase):
     top_countries: Optional[list] = None
     top_referrers: Optional[list] = None
     device_breakdown: Optional[list] = None
+    browser_breakdown: Optional[list] = None
+    os_breakdown: Optional[list] = None
+    visitor_type_breakdown: Optional[list] = None
 
     class Config:
         from_attributes = True

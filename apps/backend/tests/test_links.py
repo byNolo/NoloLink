@@ -2,6 +2,7 @@
 
 import pytest
 from tests.conftest import create_test_link, create_test_campaign
+from app.models.analytics import ClickEvent
 
 
 class TestCreateLink:
@@ -200,6 +201,40 @@ class TestLinkStats:
         assert "clicks" in data
         assert "clicks_over_time" in data
 
+    def test_link_stats_reconciles_tracked_events_and_crawlers(self, client, db, test_user):
+        link = create_test_link(db, owner_id=test_user.id, short_code="stats2")
+        db.add_all([
+            ClickEvent(
+                link_id=link.id,
+                country_code="US",
+                user_agent="Mozilla/5.0 (compatible; Discordbot/2.0; +https://discordapp.com)",
+                device_type="desktop",
+                browser="Discordbot",
+                os="Other",
+            ),
+            ClickEvent(
+                link_id=link.id,
+                country_code="CA",
+                user_agent="Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.0 Mobile/15E148 Safari/604.1",
+                device_type="mobile",
+                browser="Mobile Safari",
+                os="iOS",
+            ),
+        ])
+        db.commit()
+
+        resp = client.get("/api/links/stats2/stats")
+        assert resp.status_code == 200
+        data = resp.json()
+
+        assert data["clicks"] == 2
+        assert {"device": "crawler", "count": 1} in data["device_breakdown"]
+        assert {"device": "mobile", "count": 1} in data["device_breakdown"]
+        assert {"type": "Crawler previews", "count": 1} in data["visitor_type_breakdown"]
+        assert {"type": "Human clicks", "count": 1} in data["visitor_type_breakdown"]
+        assert {"browser": "Discordbot", "count": 1} in data["browser_breakdown"]
+        assert {"os": "iOS", "count": 1} in data["os_breakdown"]
+
 
 class TestOwnershipIsolation:
     def test_link_ownership_isolation(self, db, test_user, other_user, test_org):
@@ -224,4 +259,3 @@ class TestOwnershipIsolation:
         assert "mine" not in codes2
 
         app.dependency_overrides.clear()
-

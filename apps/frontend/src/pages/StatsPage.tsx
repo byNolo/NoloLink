@@ -74,6 +74,17 @@ export default function StatsPage() {
 
     // Check if advanced analytics are enabled
     const hasAnalytics = link.track_activity;
+    const sumCounts = (items?: { count: number }[]) => (items || []).reduce((sum, item) => sum + item.count, 0);
+    const visitorCount = (label: string) =>
+        (link.visitor_type_breakdown || []).find((item) => item.type.toLowerCase().includes(label))?.count || 0;
+    const trackedEvents = sumCounts(link.visitor_type_breakdown) || sumCounts(link.device_breakdown);
+    const totalClicks = Math.max(link.clicks || 0, trackedEvents);
+    const humanClicks = visitorCount('human');
+    const crawlerPreviews = visitorCount('crawler');
+    const deviceChartData = (link.device_breakdown || []).map((item) => ({
+        device: item.device === 'crawler' ? 'crawler previews' : item.device,
+        count: item.count,
+    }));
 
     return (
         <div className="min-h-screen bg-[#111] text-gray-100 font-sans animate-fade-in">
@@ -96,7 +107,7 @@ export default function StatsPage() {
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
                     {/* Total Clicks */}
                     <div className="bg-[#1c1c1c] rounded-2xl border border-gray-800 p-6 shadow-xl flex flex-col justify-center items-center">
-                        <div className="text-6xl font-bold text-white mb-2">{link.clicks}</div>
+                        <div className="text-6xl font-bold text-white mb-2">{totalClicks}</div>
                         <div className="text-sm text-gray-500 font-medium uppercase tracking-wider">Total Clicks</div>
                     </div>
 
@@ -135,6 +146,21 @@ export default function StatsPage() {
                     </div>
                 ) : (
                     <>
+                        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+                            <div className="bg-[#1c1c1c] rounded-2xl border border-gray-800 p-5 shadow-xl">
+                                <div className="text-xs text-gray-500 uppercase tracking-wider mb-2">Tracked Events</div>
+                                <div className="text-3xl font-bold text-white">{trackedEvents}</div>
+                            </div>
+                            <div className="bg-[#1c1c1c] rounded-2xl border border-gray-800 p-5 shadow-xl">
+                                <div className="text-xs text-gray-500 uppercase tracking-wider mb-2">Human Clicks</div>
+                                <div className="text-3xl font-bold text-white">{humanClicks}</div>
+                            </div>
+                            <div className="bg-[#1c1c1c] rounded-2xl border border-gray-800 p-5 shadow-xl">
+                                <div className="text-xs text-gray-500 uppercase tracking-wider mb-2">Crawler Previews</div>
+                                <div className="text-3xl font-bold text-white">{crawlerPreviews}</div>
+                            </div>
+                        </div>
+
                         {/* Clicks Over Time */}
                         <div className="bg-[#1c1c1c] rounded-2xl border border-gray-800 p-6 shadow-xl mb-8">
                             <h3 className="text-lg font-bold text-white mb-6">Clicks Over Last 30 Days</h3>
@@ -171,7 +197,7 @@ export default function StatsPage() {
                                                 <span className="text-gray-300">{item.country || 'Unknown'}</span>
                                                 <div className="flex items-center gap-2">
                                                     <div className="w-24 bg-gray-800 rounded-full h-2 overflow-hidden">
-                                                        <div className="bg-blue-500 h-full" style={{ width: `${(item.count / (link.clicks || 1)) * 100}%` }}></div>
+                                                        <div className="bg-blue-500 h-full" style={{ width: `${(item.count / (totalClicks || 1)) * 100}%` }}></div>
                                                     </div>
                                                     <span className="text-gray-500 text-sm w-8 text-right">{item.count}</span>
                                                 </div>
@@ -208,7 +234,7 @@ export default function StatsPage() {
                                         <ResponsiveContainer width="100%" height="100%">
                                             <PieChart>
                                                 <Pie
-                                                    data={link.device_breakdown}
+                                                    data={deviceChartData}
                                                     cx="50%"
                                                     cy="50%"
                                                     innerRadius={40}
@@ -217,7 +243,7 @@ export default function StatsPage() {
                                                     dataKey="count"
                                                     nameKey="device"
                                                 >
-                                                    {(link.device_breakdown || []).map((_, index) => (
+                                                    {deviceChartData.map((_, index) => (
                                                         <Cell key={`cell-${index}`} fill={['#3b82f6', '#8b5cf6', '#ec4899', '#f59e0b'][index % 4]} />
                                                     ))}
                                                 </Pie>
@@ -227,6 +253,40 @@ export default function StatsPage() {
                                         </ResponsiveContainer>
                                     ) : (
                                         <div className="flex items-center justify-center h-full text-gray-500 text-sm">No data yet</div>
+                                    )}
+                                </div>
+                            </div>
+                        </div>
+
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mt-6">
+                            <div className="bg-[#1c1c1c] rounded-2xl border border-gray-800 p-6 shadow-xl">
+                                <h3 className="text-lg font-bold text-white mb-4">Browsers</h3>
+                                <div className="space-y-3">
+                                    {(link.browser_breakdown || []).length > 0 ? (
+                                        link.browser_breakdown?.map((item, idx) => (
+                                            <div key={idx} className="flex justify-between items-center gap-4">
+                                                <span className="text-gray-300 truncate" title={item.browser}>{item.browser || 'Unknown'}</span>
+                                                <span className="text-gray-500 text-sm bg-gray-800 px-2 py-1 rounded-md">{item.count}</span>
+                                            </div>
+                                        ))
+                                    ) : (
+                                        <p className="text-gray-500 text-sm">No data yet</p>
+                                    )}
+                                </div>
+                            </div>
+
+                            <div className="bg-[#1c1c1c] rounded-2xl border border-gray-800 p-6 shadow-xl">
+                                <h3 className="text-lg font-bold text-white mb-4">Operating Systems</h3>
+                                <div className="space-y-3">
+                                    {(link.os_breakdown || []).length > 0 ? (
+                                        link.os_breakdown?.map((item, idx) => (
+                                            <div key={idx} className="flex justify-between items-center gap-4">
+                                                <span className="text-gray-300 truncate" title={item.os}>{item.os || 'Unknown'}</span>
+                                                <span className="text-gray-500 text-sm bg-gray-800 px-2 py-1 rounded-md">{item.count}</span>
+                                            </div>
+                                        ))
+                                    ) : (
+                                        <p className="text-gray-500 text-sm">No data yet</p>
                                     )}
                                 </div>
                             </div>

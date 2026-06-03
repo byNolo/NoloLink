@@ -8,6 +8,29 @@ import user_agents
 import requests
 from urllib.parse import urlparse
 
+BOT_USER_AGENT_MARKERS = (
+    "bot",
+    "crawler",
+    "spider",
+    "preview",
+    "facebookexternalhit",
+    "slackbot",
+    "discordbot",
+    "twitterbot",
+    "linkedinbot",
+    "whatsapp",
+    "telegrambot",
+)
+
+
+def is_crawler_user_agent(user_agent_string: str, ua_data=None) -> bool:
+    if ua_data is not None and getattr(ua_data, "is_bot", False):
+        return True
+
+    normalized = (user_agent_string or "").lower()
+    return any(marker in normalized for marker in BOT_USER_AGENT_MARKERS)
+
+
 def get_country_code(ip: str) -> str:
     """
     Fetches the ISO country code for an IP address using ip-api.com.
@@ -78,7 +101,9 @@ def capture_click(db: Session, link: Link, request: Request):
     ua_data = user_agents.parse(user_agent_string)
     
     device_type = "desktop"
-    if ua_data.is_mobile:
+    if is_crawler_user_agent(user_agent_string, ua_data):
+        device_type = "crawler"
+    elif ua_data.is_mobile:
         device_type = "mobile"
     elif ua_data.is_tablet:
         device_type = "tablet"
@@ -103,4 +128,3 @@ def capture_click(db: Session, link: Link, request: Request):
     
     db.add(event)
     db.commit()
-
