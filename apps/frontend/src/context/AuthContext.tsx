@@ -19,7 +19,7 @@ interface AuthContextType {
     user: User | null;
     token: string | null;
     login: (redirectUrl?: string) => void;
-    logout: () => void;
+    logout: () => Promise<void>;
     isAuthenticated: boolean;
     refreshProfile: () => Promise<void>;
     isLoading: boolean;
@@ -42,34 +42,34 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         const initAuth = async () => {
             const storedToken = localStorage.getItem('token');
             if (storedToken) {
+                localStorage.removeItem('token');
                 setToken(storedToken);
-                await fetchUserProfile(storedToken);
-                await loadOrgs(storedToken);
-            } else {
-                const params = new URLSearchParams(window.location.search);
-                const urlToken = params.get('token');
-                if (urlToken) {
-                    setToken(urlToken);
-                    localStorage.setItem('token', urlToken);
-                    await fetchUserProfile(urlToken);
-                    await loadOrgs(urlToken);
-                    window.history.replaceState({}, document.title, window.location.pathname);
-
-                    const redirectUrl = localStorage.getItem('loginRedirectUrl');
-                    if (redirectUrl) {
-                        localStorage.removeItem('loginRedirectUrl');
-                        window.location.href = redirectUrl;
-                    }
-                }
             }
+
+            try {
+                const profileLoaded = await fetchUserProfile(storedToken ?? undefined);
+                if (profileLoaded) {
+                    await loadOrgs(storedToken ?? undefined);
+                }
+            } catch (error) {
+                console.error('Failed to initialize auth', error);
+            }
+
+            const redirectUrl = localStorage.getItem('loginRedirectUrl');
+            if (redirectUrl) {
+                localStorage.removeItem('loginRedirectUrl');
+                window.location.href = redirectUrl;
+            }
+
             setIsLoading(false);
         };
-        initAuth();
+
+        void initAuth();
     }, []);
 
-    const loadOrgs = async (authToken: string) => {
+    const loadOrgs = async (authToken?: string) => {
         try {
-            const memberships = await fetchMyOrgs(authToken);
+            const memberships = await fetchMyOrgs(authToken ?? '');
             setOrgs(memberships);
             if (memberships.length > 0) {
                 const savedOrgId = getCurrentOrgId();
@@ -79,7 +79,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
                 setCurrentOrgId(active.org_id);
             }
         } catch (error) {
-            console.error("Failed to load orgs", error);
+            console.error('Failed to load orgs', error);
         }
     };
 
@@ -92,27 +92,40 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     }, [orgs]);
 
     const refreshOrgs = useCallback(async () => {
-        if (token) {
-            await loadOrgs(token);
-        }
+        await loadOrgs(token ?? undefined);
     }, [token]);
 
-    const fetchUserProfile = async (authToken: string) => {
+    const fetchUserProfile = async (authToken?: string) => {
         try {
             const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:3071';
+            const headers: Record<string, string> = {};
+            if (authToken) {
+                headers['Authorization'] = `Bearer ${authToken}`;
+            }
+
             const response = await fetch(`${apiUrl}/api/users/me`, {
-                headers: { 'Authorization': `Bearer ${authToken}` }
+                credentials: 'include',
+                headers,
             });
+
             if (response.ok) {
                 const userData = await response.json();
                 setUser(userData);
+                setToken(authToken ?? token ?? null);
                 localStorage.setItem('user', JSON.stringify(userData));
-            } else {
-                logout();
+                return true;
             }
+
+            setUser(null);
+            setToken(null);
+            localStorage.removeItem('user');
+            return false;
         } catch (error) {
-            console.error("Failed to fetch user profile", error);
-            logout();
+            console.error('Failed to fetch user profile', error);
+            setUser(null);
+            setToken(null);
+            localStorage.removeItem('user');
+            return false;
         }
     };
 
@@ -124,7 +137,17 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         window.location.href = `${apiUrl}/api/auth/login`;
     };
 
-    const logout = () => {
+    const logout = async () => {
+        const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:3071';
+        try {
+            await fetch(`${apiUrl}/api/auth/logout`, {
+                method: 'POST',
+                credentials: 'include',
+            });
+        } catch (error) {
+            console.error('Failed to clear auth cookie', error);
+        }
+
         setUser(null);
         setToken(null);
         setOrgs([]);
@@ -135,9 +158,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     };
 
     const refreshProfile = async () => {
-        if (token) {
-            await fetchUserProfile(token);
-        }
+        await fetchUserProfile(token ?? undefined);
     };
 
     return (

@@ -329,6 +329,14 @@ def accept_invite(
         db.commit()
         raise HTTPException(status_code=400, detail="Invite has expired")
     
+    invited_email = (invite.email or "").strip().lower()
+    current_user_email = (current_user.email or "").strip().lower()
+    if invited_email and invited_email != current_user_email:
+        raise HTTPException(
+            status_code=403,
+            detail="This invite was issued to a different email address.",
+        )
+
     if invite.role == "owner":
         # Demote existing owners to admin
         from app.models.organization import OrgMembership

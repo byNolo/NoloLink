@@ -92,3 +92,37 @@ def test_transfer_ownership_via_invite(admin_client: TestClient, db: Session, te
         def _override_admin():
             return test_superuser
         app.dependency_overrides[get_current_active_user] = _override_admin
+
+
+def test_reject_invite_for_different_email(admin_client: TestClient, db: Session, test_superuser: User, other_user: User, test_user: User):
+    response = admin_client.post(
+        "/api/orgs/",
+        json={"name": "Invite Email Validation Org"}
+    )
+    assert response.status_code == 200
+    org_id = response.json()["id"]
+
+    response = admin_client.post(
+        f"/api/orgs/{org_id}/invites",
+        json={"email": other_user.email, "role": "member"}
+    )
+    assert response.status_code == 200
+    invite = db.query(OrgInvite).filter(OrgInvite.org_id == org_id, OrgInvite.email == other_user.email).first()
+    assert invite is not None
+    invite_token = invite.token
+
+    def _override_user():
+        return test_user
+
+    app.dependency_overrides[get_current_active_user] = _override_user
+    try:
+        response = admin_client.post(
+            "/api/orgs/invites/accept",
+            json={"token": invite_token}
+        )
+        assert response.status_code == 403
+        assert "different email" in response.json()["detail"].lower()
+    finally:
+        def _override_admin():
+            return test_superuser
+        app.dependency_overrides[get_current_active_user] = _override_admin
