@@ -21,13 +21,13 @@ export default function AcceptInvitePage() {
             return;
         }
 
-        if (token && inviteToken) {
+        if (inviteToken) {
             handleAccept();
         }
     }, [authLoading, isAuthenticated, token, inviteToken]);
 
     async function handleAccept() {
-        if (!token || !inviteToken) return;
+        if (!isAuthenticated || !inviteToken) return;
         try {
             setStatus('loading');
             await acceptInvite(token, inviteToken);

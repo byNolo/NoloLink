@@ -3,23 +3,16 @@ import { useAuth } from '../context/AuthContext';
 import type { User } from '../context/AuthContext';
 
 export default function AdminPanel() {
-    const { token } = useAuth();
+    const { token, isAuthenticated } = useAuth();
     const [requests, setRequests] = useState<User[]>([]);
     const [isLoading, setIsLoading] = useState(true);
-
-    useEffect(() => {
-        if (token) {
-            fetchRequests();
-        }
-    }, [token]);
 
     async function fetchRequests() {
         try {
             const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:3071';
             const response = await fetch(`${apiUrl}/api/users/requests`, {
-                headers: {
-                    'Authorization': `Bearer ${token}`
-                }
+                credentials: 'include',
+                headers: token ? { 'Authorization': `Bearer ${token}` } : {}
             });
             if (response.ok) {
                 const data = await response.json();
@@ -32,14 +25,19 @@ export default function AdminPanel() {
         }
     }
 
+    useEffect(() => {
+        if (isAuthenticated) {
+            fetchRequests();
+        }
+    }, [isAuthenticated]);
+
     async function handleAction(userId: number, action: 'approve' | 'reject') {
         try {
             const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:3071';
             const response = await fetch(`${apiUrl}/api/users/${userId}/${action}`, {
                 method: 'POST',
-                headers: {
-                    'Authorization': `Bearer ${token}`
-                }
+                credentials: 'include',
+                headers: token ? { 'Authorization': `Bearer ${token}` } : {}
             });
             if (response.ok) {
                 setRequests(requests.filter(req => req.id !== userId));

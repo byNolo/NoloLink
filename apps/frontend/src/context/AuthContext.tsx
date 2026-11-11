@@ -41,15 +41,27 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     useEffect(() => {
         const initAuth = async () => {
             const storedToken = localStorage.getItem('token');
+            const params = new URLSearchParams(window.location.search);
+            const callbackToken = params.get('token');
+            const authToken = storedToken ?? callbackToken ?? undefined;
+
             if (storedToken) {
                 localStorage.removeItem('token');
                 setToken(storedToken);
             }
+            if (callbackToken) {
+                setToken(callbackToken);
+                params.delete('token');
+                params.delete('username');
+                const search = params.toString();
+                const cleanUrl = `${window.location.pathname}${search ? `?${search}` : ''}${window.location.hash}`;
+                window.history.replaceState({}, document.title, cleanUrl);
+            }
 
             try {
-                const profileLoaded = await fetchUserProfile(storedToken ?? undefined);
+                const profileLoaded = await fetchUserProfile(authToken);
                 if (profileLoaded) {
-                    await loadOrgs(storedToken ?? undefined);
+                    await loadOrgs(authToken);
                 }
             } catch (error) {
                 console.error('Failed to initialize auth', error);

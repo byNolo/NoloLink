@@ -6,7 +6,7 @@ import type { User } from '../context/AuthContext';
 import Navbar from '../components/Navbar';
 
 export default function SuperAdminPage() {
-    const { token, user } = useAuth();
+    const { token, user, isAuthenticated } = useAuth();
     const [activeTab, setActiveTab] = useState<'orgs' | 'requests' | 'create'>('orgs');
     const [allOrgs, setAllOrgs] = useState<OrgSummary[]>([]);
     const [isLoading, setIsLoading] = useState(true);
@@ -21,17 +21,16 @@ export default function SuperAdminPage() {
     const [createMsg, setCreateMsg] = useState('');
 
     useEffect(() => {
-        if (token) {
+        if (isAuthenticated) {
             loadAllOrgs();
             loadRequests();
         }
-    }, [token]);
+    }, [isAuthenticated]);
 
     async function loadAllOrgs() {
-        if (!token) return;
         setIsLoading(true);
         try {
-            const data = await fetchAllOrgs(token);
+            const data = await fetchAllOrgs(token ?? undefined);
             setAllOrgs(data);
         } catch (err) {
             console.error(err);
@@ -41,12 +40,12 @@ export default function SuperAdminPage() {
     }
 
     async function loadRequests() {
-        if (!token) return;
         setReqLoading(true);
         try {
             const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:3071';
             const response = await fetch(`${apiUrl}/api/users/requests`, {
-                headers: { 'Authorization': `Bearer ${token}` }
+                credentials: 'include',
+                headers: token ? { 'Authorization': `Bearer ${token}` } : {}
             });
             if (response.ok) {
                 setRequests(await response.json());
@@ -59,12 +58,12 @@ export default function SuperAdminPage() {
     }
 
     async function handleAction(userId: number, action: 'approve' | 'reject') {
-        if (!token) return;
-        const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:3071';
+                const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:3071';
         try {
             const response = await fetch(`${apiUrl}/api/users/${userId}/${action}`, {
                 method: 'POST',
-                headers: { 'Authorization': `Bearer ${token}` }
+                credentials: 'include',
+                headers: token ? { 'Authorization': `Bearer ${token}` } : {}
             });
             if (response.ok) {
                 setRequests(requests.filter(r => r.id !== userId));

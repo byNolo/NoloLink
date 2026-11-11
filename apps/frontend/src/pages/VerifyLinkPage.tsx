@@ -17,12 +17,10 @@ export default function VerifyLinkPage() {
     // Auto-verify if only login is required and we are authenticated, OR if we have login option and are authenticated (hybrid)
     // Actually, for hybrid, we should try to verify immediately if authenticated.
     useEffect(() => {
-        console.log("VerifyLinkPage Effect:", { hasLogin, isAuthenticated, token });
-        if (hasLogin && isAuthenticated && token) {
-            console.log("Triggering verifyAccess from Effect");
+        if (hasLogin && isAuthenticated) {
             verifyAccess();
         }
-    }, [hasLogin, isAuthenticated, token]);
+    }, [hasLogin, isAuthenticated]);
 
     async function verifyAccess(e?: React.FormEvent) {
         if (e) e.preventDefault();
@@ -42,6 +40,7 @@ export default function VerifyLinkPage() {
             const response = await fetch(`${apiUrl}/api/verify/${shortCode}`, {
                 method: 'POST',
                 headers,
+                credentials: 'include',
                 body: JSON.stringify({ password: password || undefined })
             });
 

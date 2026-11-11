@@ -78,11 +78,20 @@ def callback(code: str, state: str, db: Session = Depends(get_db)):
     else:
         db_user = crud_user.create_user(db, user_in)
 
-    # 4. Create Session/Token for Frontend (simplified for MVP)
-    # For now, redirect to frontend with access_token or a session cookie
-    # Ideally, issue our own JWT. For MVP speed, passing the existing data might be enough or just a simple cookie.
-    # Let's redirect to frontend with the raw token for now (NOT SECURE FOR PROD, but okay for checking flow).
-    # TODO: Implement proper JWT issuance.
-    
-    frontend_url = f"{settings.FRONTEND_URL}?token={access_token}&username={db_user.username}"
-    return RedirectResponse(frontend_url)
+    response = RedirectResponse(settings.FRONTEND_URL)
+    response.set_cookie(
+        key="access_token",
+        value=access_token,
+        httponly=True,
+        secure=settings.FRONTEND_URL.startswith("https://"),
+        samesite="none" if settings.FRONTEND_URL.startswith("https://") else "lax",
+        path="/",
+        max_age=60 * 60 * 24 * 7,
+    )
+    return response
+
+
+@router.post("/logout")
+def logout(response: Response):
+    response.delete_cookie("access_token", path="/")
+    return {"detail": "Logged out"}

@@ -85,6 +85,36 @@ describe('AuthContext', () => {
         expect(screen.getByTestId('token').textContent).toBe('saved-token');
     });
 
+    it('loads token from the OAuth callback URL', async () => {
+        Object.defineProperty(window, 'location', {
+            value: { href: '', search: '?token=callback-token&username=testuser', pathname: '/', hash: '' },
+            writable: true,
+        });
+        mockFetch.mockResolvedValue({
+            ok: true,
+            json: async () => ({
+                id: 1,
+                username: 'testuser',
+                email: 'test@example.com',
+                is_active: true,
+                is_superuser: false,
+                is_approved: true,
+                request_status: 'approved',
+            }),
+        });
+
+        await act(async () => {
+            render(
+                <AuthProvider>
+                    <AuthDisplay />
+                </AuthProvider>
+            );
+        });
+
+        expect(screen.getByTestId('authenticated').textContent).toBe('true');
+        expect(screen.getByTestId('token').textContent).toBe('callback-token');
+    });
+
     it('logs out and clears state', async () => {
         localStorage.setItem('token', 'old-token');
         mockFetch.mockResolvedValue({

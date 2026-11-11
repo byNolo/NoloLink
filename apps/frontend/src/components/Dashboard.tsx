@@ -37,7 +37,7 @@ const TriStateToggle = ({ label, value, onChange }: { label: string, value: bool
 );
 
 export default function Dashboard() {
-    const { token, user, refreshProfile, currentOrg } = useAuth();
+    const { token, user, refreshProfile, currentOrg, isAuthenticated } = useAuth();
     const [links, setLinks] = useState<Link[]>([]);
     const [campaigns, setCampaigns] = useState<Campaign[]>([]);
 
@@ -141,18 +141,18 @@ export default function Dashboard() {
     const [isLoading, setIsLoading] = useState(true);
 
     useEffect(() => {
-        if (token && currentOrg && (user?.is_approved || user?.is_superuser)) {
+        if (isAuthenticated && currentOrg && (user?.is_approved || user?.is_superuser)) {
             loadData();
         } else if (!currentOrg) {
             // Org not loaded yet, keep showing loading
         } else {
             setIsLoading(false);
         }
-    }, [token, user?.is_approved, user?.is_superuser, currentOrg]);
+    }, [isAuthenticated, token, user?.is_approved, user?.is_superuser, currentOrg]);
 
     async function loadData() {
         try {
-            if (!token) return;
+            if (!isAuthenticated) return;
             setIsLoading(true);
             const [linksData, campaignsData] = await Promise.all([
                 fetchLinks(token, {
@@ -172,17 +172,17 @@ export default function Dashboard() {
     }
 
     useEffect(() => {
-        if (token && currentOrg && (user?.is_approved || user?.is_superuser)) {
+        if (isAuthenticated && currentOrg && (user?.is_approved || user?.is_superuser)) {
             loadData();
         } else if (!currentOrg) {
             // Org not loaded yet, keep showing loading
         } else {
             setIsLoading(false);
         }
-    }, [token, user?.is_approved, user?.is_superuser, currentOrg, searchQuery, filterCampaignId, filterStatus]);
+    }, [isAuthenticated, token, user?.is_approved, user?.is_superuser, currentOrg, searchQuery, filterCampaignId, filterStatus]);
 
     async function handleRequestAccess() {
-        if (!token) return;
+        if (!isAuthenticated) return;
         try {
             setIsRequesting(true);
             const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:3071';
@@ -278,7 +278,7 @@ export default function Dashboard() {
 
     async function handleDeleteCampaign(id: number) {
         if (!confirm('Are you sure? This will NOT delete the links, just untag them.')) return;
-        if (!token) return;
+        if (!isAuthenticated) return;
         try {
             await deleteCampaign(token, id);
             setCampaigns(campaigns.filter(c => c.id !== id));
@@ -290,7 +290,7 @@ export default function Dashboard() {
 
     async function handleDeleteLink(id: number) {
         if (!confirm('Are you sure you want to delete this link?')) return;
-        if (!token) return;
+        if (!isAuthenticated) return;
 
         try {
             await deleteLink(token, id);
@@ -302,7 +302,7 @@ export default function Dashboard() {
 
     async function handleUpdateLink(e: React.FormEvent) {
         e.preventDefault();
-        if (!editingLink || !token) return;
+        if (!editingLink || !isAuthenticated) return;
 
         try {
             setIsSaving(true);
@@ -366,7 +366,7 @@ export default function Dashboard() {
 
     async function handleBulkUpdate(e: React.FormEvent) {
         e.preventDefault();
-        if (selectedLinkIds.size === 0 || !token) return;
+        if (selectedLinkIds.size === 0 || !isAuthenticated) return;
 
         try {
             setIsBulkSaving(true);
@@ -473,7 +473,7 @@ export default function Dashboard() {
 
     // CSV Export/Import Handlers
     async function handleExportCSV() {
-        if (!token) return;
+        if (!isAuthenticated) return;
         try {
             setIsExporting(true);
             await exportLinksCSV(token);
@@ -486,7 +486,7 @@ export default function Dashboard() {
 
     async function handleImportCSV(e: React.ChangeEvent<HTMLInputElement>) {
         const file = e.target.files?.[0];
-        if (!file || !token) return;
+        if (!file || !isAuthenticated) return;
         try {
             setIsImporting(true);
             setImportResult(null);
@@ -503,7 +503,7 @@ export default function Dashboard() {
 
     // Activity Log Handler
     async function loadAuditLogs() {
-        if (!token) return;
+        if (!isAuthenticated) return;
         try {
             setIsLoadingLogs(true);
             const logs = await fetchAuditLogs(token, {

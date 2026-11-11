@@ -12,7 +12,7 @@ import Navbar from '../components/Navbar';
 
 export default function StatsPage() {
     const { shortCode } = useParams<{ shortCode: string }>();
-    const { token, isLoading: authLoading } = useAuth();
+    const { token, isAuthenticated, isLoading: authLoading } = useAuth();
     const [link, setLink] = useState<Link | null>(null);
     const [isLoading, setIsLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
@@ -20,20 +20,20 @@ export default function StatsPage() {
     useEffect(() => {
         if (authLoading) return;
 
-        if (token && shortCode) {
+        if (isAuthenticated && shortCode) {
             loadStats();
-        } else if (!token) {
+        } else if (!isAuthenticated) {
             // No token = Unauthorized for stats -> Redirect to destination
             const shortDomain = import.meta.env.VITE_SHORT_LINK_DOMAIN || 'localhost:3071';
             const protocol = shortDomain.includes('localhost') ? 'http' : 'https';
             window.location.href = `${protocol}://${shortDomain}/${shortCode}`;
         }
-    }, [token, shortCode, authLoading]);
+    }, [isAuthenticated, token, shortCode, authLoading]);
 
     async function loadStats() {
         try {
             setIsLoading(true);
-            if (!shortCode || !token) return;
+            if (!shortCode || !isAuthenticated) return;
             const data = await fetchLinkStats(token, shortCode);
             setLink(data);
         } catch (err: any) {

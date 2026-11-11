@@ -5,7 +5,7 @@ import type { OrgMember, OrgInvite, Organization } from '../lib/api';
 import Navbar from '../components/Navbar';
 
 export default function OrgSettingsPage() {
-    const { token, user, currentOrg, refreshOrgs } = useAuth();
+    const { token, user, currentOrg, refreshOrgs, isAuthenticated } = useAuth();
     const [activeTab, setActiveTab] = useState<'general' | 'policies' | 'members' | 'invites'>('general');
     const [members, setMembers] = useState<OrgMember[]>([]);
     const [invites, setInvites] = useState<OrgInvite[]>([]);
@@ -32,13 +32,13 @@ export default function OrgSettingsPage() {
     const isAdmin = isOwner || myRole === 'admin';
 
     useEffect(() => {
-        if (token && orgId) {
+        if (isAuthenticated && orgId) {
             loadData();
         }
-    }, [token, orgId]);
+    }, [isAuthenticated, token, orgId]);
 
     async function loadData() {
-        if (!token || !orgId) return;
+        if (!isAuthenticated || !orgId) return;
         setIsLoading(true);
         try {
             const [m, i, d] = await Promise.all([
@@ -58,7 +58,7 @@ export default function OrgSettingsPage() {
     }
 
     async function handleSaveOrg() {
-        if (!token || !orgId || !orgName.trim()) return;
+        if (!isAuthenticated || !orgId || !orgName.trim()) return;
         setIsSaving(true);
         setSaveMsg('');
         try {
@@ -74,7 +74,7 @@ export default function OrgSettingsPage() {
     }
 
     async function handleUpdatePolicy(field: string, value: boolean) {
-        if (!token || !orgId || !isOwner) return;
+        if (!isAuthenticated || !orgId || !isOwner) return;
         setPoliSaving(true);
         try {
             await updateOrg(token, orgId, { [field]: value });
@@ -87,7 +87,7 @@ export default function OrgSettingsPage() {
     }
 
     async function handleRoleChange(userId: number, newRole: string) {
-        if (!token || !orgId) return;
+        if (!isAuthenticated || !orgId) return;
 
         if (newRole === 'owner') {
             const confirmed = confirm("Transfer ownership? This will demote you (and any other current owners) to Admin. This action cannot be undone by you once Bob accepts or the role is changed.");
@@ -109,7 +109,7 @@ export default function OrgSettingsPage() {
     }
 
     async function handleRemoveMember(userId: number, username: string) {
-        if (!token || !orgId) return;
+        if (!isAuthenticated || !orgId) return;
         if (!confirm(`Remove ${username} from this organization?`)) return;
         try {
             await removeMember(token, orgId, userId);
@@ -121,7 +121,7 @@ export default function OrgSettingsPage() {
 
     async function handleSendInvite(e: React.FormEvent) {
         e.preventDefault();
-        if (!token || !orgId || !inviteEmail.trim()) return;
+        if (!isAuthenticated || !orgId || !inviteEmail.trim()) return;
         setInviteLoading(true);
         setInviteMsg('');
         try {
@@ -139,7 +139,7 @@ export default function OrgSettingsPage() {
     }
 
     async function handleRevokeInvite(inviteId: number) {
-        if (!token || !orgId) return;
+        if (!isAuthenticated || !orgId) return;
         if (!confirm('Revoke this invite?')) return;
         try {
             await revokeInvite(token, orgId, inviteId);
